@@ -1,4 +1,4 @@
-import { CloudCheck, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, NotePencil, Password, Plus, ShareNetwork, SignOut, SidebarSimple, Tag, Trash, WifiSlash, X } from "@phosphor-icons/react";
+import { CloudCheck, Desktop, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, Moon, NotePencil, Password, Plus, ShareNetwork, SignOut, SidebarSimple, Star, Sun, Tag, Trash, WifiSlash, X } from "@phosphor-icons/react";
 import type { NoteDocument } from "@save-text/shared";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -6,8 +6,11 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { api, ApiError } from "../lib/api";
 import { decryptNote, deriveNoteProtection, destroyKey, encryptNote, LockedNoteError, type NoteProtection } from "../lib/crypto";
 import { localDb, type LocalNote } from "../lib/db";
+import { noteColorClass } from "../lib/noteColors";
+import { useTheme } from "../lib/theme";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
+import { NoteColorPicker } from "./NoteColorPicker";
 import { ProtectNoteDialog, UnlockNoteCard } from "./NoteLock";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -80,6 +83,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
   const unlockInputRef = useRef<HTMLInputElement>(null);
   const [protectDialogOpen, setProtectDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const theme = useTheme();
 
   const loadNotes = useCallback(async () => {
     try {
@@ -104,7 +108,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
         if (reason instanceof LockedNoteError) {
           return {
             encrypted: note,
-            document: { title: reason.title, markdown: "", tags: reason.tags },
+            document: { title: reason.title, markdown: "", tags: reason.tags, favorite: reason.favorite, color: reason.color },
             locked: true,
             protectionSalt: reason.salt,
           };
@@ -311,7 +315,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
     const locked: OpenNote = {
       ...note,
       encrypted: latest ?? note.encrypted,
-      document: { title: draft.title, markdown: "", tags: draft.tags },
+      document: { title: draft.title, markdown: "", tags: draft.tags, favorite: draft.favorite, color: draft.color },
       locked: true,
       protectionSalt: protection.salt,
     };
@@ -319,6 +323,12 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
     setDraft(locked.document);
     setDirty(false);
     setMessage("Note locked");
+  }
+
+  // Favourite/colour also update the sidebar right away instead of waiting for the autosave round-trip.
+  function updateNoteMeta(patch: Pick<NoteDocument, "favorite" | "color">) {
+    changeDraft({ ...draft, ...patch });
+    setNotes((existing) => existing.map((note) => note.encrypted.id === selectedId ? { ...note, document: { ...note.document, ...patch } } : note));
   }
 
   function addTag(value: string) {
@@ -342,13 +352,36 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
     if (!search) return notes;
     return notes.filter((note) => `${note.document.title}\n${note.document.markdown}\n${note.document.tags.join(" ")}`.toLowerCase().includes(search));
   }, [notes, query]);
+  const favoriteNotes = visibleNotes.filter((note) => note.document.favorite);
+  const otherNotes = visibleNotes.filter((note) => !note.document.favorite);
   const currentNote = notes.find((note) => note.encrypted.id === selectedId);
+  const metaLocked = !selectedId || Boolean(currentNote?.locked);
+
+  const renderNoteItem = (note: OpenNote) => {
+    const selected = selectedId === note.encrypted.id;
+    const colorClass = noteColorClass(note.document.color);
+    const surface = colorClass
+      ? `${colorClass} note-card ${selected ? "shadow-sm ring-1 ring-neutral-900/15" : "hover:ring-1 hover:ring-neutral-900/10"}`
+      : selected ? "bg-white shadow-sm ring-1 ring-neutral-900/[.07]" : "hover:bg-neutral-200/60";
+    return <button key={note.encrypted.id} className={`mb-1 grid w-full gap-1 rounded-xl px-3 py-3 text-left transition ${surface}`} onClick={() => selectNote(note)}>
+      <strong className="flex items-center gap-1.5 truncate text-[0.8125rem] font-semibold">
+        {note.locked && <LockSimple size={12} weight="fill" className="shrink-0 text-amber-600" />}
+        <span className="truncate">{note.document.title || "Untitled"}</span>
+        {note.document.favorite && <Star size={12} weight="fill" className="ml-auto shrink-0 text-amber-500" />}
+      </strong>
+      <span className="truncate text-xs text-neutral-500">{note.locked ? "Locked with a note password" : note.document.markdown.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "Photo").replace(/[#*_>`]/g, "").slice(0, 82) || "Empty note"}</span>
+      {note.document.tags.length > 0 && <span className="flex gap-1 overflow-hidden pt-0.5">{note.document.tags.slice(0, 3).map((tag) => <span key={tag} className={`truncate rounded px-1.5 py-0.5 text-[0.5625rem] font-medium ${tagColor(tag)}`}>#{tag}</span>)}</span>}
+      <small className="mt-1 flex items-center justify-between text-[0.625rem] text-neutral-400"><time>{new Date(note.encrypted.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time><span className={note.encrypted.syncStatus === "conflict" ? "text-red-500" : ""}>{note.encrypted.syncStatus === "synced" ? "Saved" : note.encrypted.syncStatus}</span></small>
+    </button>;
+  };
+  const sectionLabel = (icon: React.ReactNode, label: string, count: number) =>
+    <div className="flex items-center justify-between px-2 pb-2 pt-1 text-[0.6875rem] font-semibold uppercase tracking-[.08em] text-neutral-400"><span className="flex items-center gap-1.5">{icon} {label}</span><span>{count}</span></div>;
   const hasNotePassword = Boolean(currentNote?.protectionSalt || (selectedId && noteProtections.current.has(selectedId)));
 
   return <div className="flex h-screen overflow-hidden bg-white text-neutral-950">
     {sidebarOpen && <button className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px] md:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />}
     <aside className={`fixed inset-y-0 left-0 z-30 shrink-0 overflow-hidden border-r border-neutral-200 bg-neutral-50 transition-[transform,width] duration-200 md:relative ${sidebarOpen ? "w-[310px] translate-x-0" : "w-[310px] -translate-x-full md:w-0"}`}>
-      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_auto_1fr_auto]">
+      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_1fr_auto]">
         <header className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2.5"><Logo /><strong className="text-[0.9375rem] tracking-[-.01em]">DeezNote</strong></div>
           <Button className="md:hidden" variant="ghost" size="icon-sm" title="Close sidebar" onClick={() => setSidebarOpen(false)}><X size={17} /></Button>
@@ -364,27 +397,27 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
           <MagnifyingGlass className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-neutral-400" size={15} />
           <Input className="h-9 border-transparent bg-neutral-200/70 pl-9 shadow-none focus:border-neutral-300 focus:bg-white focus:ring-0" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search notes" />
         </div>
-        <div className="flex items-center justify-between px-4 pb-2 text-[0.6875rem] font-semibold uppercase tracking-[.08em] text-neutral-400"><span className="flex items-center gap-1.5"><List size={13} weight="bold" /> All notes</span><span>{visibleNotes.length}</span></div>
-
         <div className="overflow-y-auto px-2 pb-3">
-          {visibleNotes.map((note) => <button key={note.encrypted.id} className={`mb-1 grid w-full gap-1 rounded-xl px-3 py-3 text-left transition-colors ${selectedId === note.encrypted.id ? "bg-white shadow-sm ring-1 ring-black/[.06]" : "hover:bg-neutral-200/60"}`} onClick={() => selectNote(note)}>
-            <strong className="flex items-center gap-1.5 truncate text-[0.8125rem] font-semibold">{note.locked && <LockSimple size={12} weight="fill" className="shrink-0 text-amber-600" />}<span className="truncate">{note.document.title || "Untitled"}</span></strong>
-            <span className="truncate text-xs text-neutral-500">{note.document.markdown.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "Photo").replace(/[#*_>`]/g, "").slice(0, 82) || "Empty note"}</span>
-            {note.document.tags.length > 0 && <span className="flex gap-1 overflow-hidden pt-0.5">{note.document.tags.slice(0, 3).map((tag) => <span key={tag} className={`truncate rounded px-1.5 py-0.5 text-[0.5625rem] font-medium ${tagColor(tag)}`}>#{tag}</span>)}</span>}
-            <small className="mt-1 flex items-center justify-between text-[0.625rem] text-neutral-400"><time>{new Date(note.encrypted.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time><span className={note.encrypted.syncStatus === "conflict" ? "text-red-500" : ""}>{note.encrypted.syncStatus === "synced" ? "Saved" : note.encrypted.syncStatus}</span></small>
-          </button>)}
+          {favoriteNotes.length > 0 && <div className="mb-3">
+            {sectionLabel(<Star size={13} weight="fill" className="text-amber-500" />, "Favourites", favoriteNotes.length)}
+            {favoriteNotes.map(renderNoteItem)}
+          </div>}
+          {otherNotes.length > 0 && <>
+            {sectionLabel(<List size={13} weight="bold" />, favoriteNotes.length ? "Other notes" : "All notes", otherNotes.length)}
+            {otherNotes.map(renderNoteItem)}
+          </>}
           {!visibleNotes.length && <div className="px-5 py-14 text-center"><NotePencil className="mx-auto mb-3 text-neutral-300" size={30} weight="duotone" /><p className="text-sm font-medium text-neutral-600">{query ? "No matching notes" : "No notes yet"}</p><span className="mt-1 block text-xs leading-5 text-neutral-400">{query ? "Try another search." : "Create a note to start writing."}</span></div>}
         </div>
 
         <footer className="flex h-14 items-center justify-between border-t border-neutral-200 px-3">
           <span className={`flex items-center gap-1.5 text-[0.6875rem] font-medium ${online ? "text-emerald-600" : "text-orange-600"}`}>{online ? <CloudCheck size={15} weight="duotone" /> : <WifiSlash size={15} weight="duotone" />}{online ? "Synced" : "Offline"}</span>
-          <div className="flex"><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
+          <div className="flex"><Button variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
         </footer>
       </div>
     </aside>
 
-    <main className="min-w-0 flex-1 bg-white">
-      <header className="flex h-14 items-center justify-between border-b border-neutral-100 px-3 sm:px-5">
+    <main className={`note-page min-w-0 flex-1 ${noteColorClass(draft.color)}`}>
+      <header className="flex h-14 items-center justify-between border-b border-neutral-900/[.06] px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2">
           <Button variant="ghost" size="icon-sm" title="Toggle sidebar" onClick={() => setSidebarOpen((open) => !open)}><SidebarSimple size={19} /></Button>
           <span className="hidden truncate text-xs text-neutral-400 sm:block">Notes <b className="px-1 font-normal text-neutral-300">/</b> <span className="text-neutral-600">{draft.title || "Untitled"}</span></span>
@@ -392,6 +425,16 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
         <div className="flex items-center gap-2 sm:gap-3">
           <span className={`hidden text-[0.6875rem] sm:block ${dirty ? "text-amber-600" : "text-neutral-400"}`}>{saving ? "Saving…" : message}</span>
           <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs"><button className={`rounded-md px-2.5 py-1.5 transition ${!preview ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`} onClick={() => setPreview(false)}>Edit</button><button className={`rounded-md px-2.5 py-1.5 transition ${preview ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`} onClick={() => setPreview(true)}>Preview</button></div>
+          <Button
+            className={draft.favorite ? "text-amber-500 hover:bg-amber-50 hover:text-amber-600" : "text-neutral-400"}
+            variant="ghost"
+            size="icon-sm"
+            disabled={metaLocked}
+            title={draft.favorite ? "Remove from favourites" : "Add to favourites"}
+            aria-pressed={Boolean(draft.favorite)}
+            onClick={() => updateNoteMeta({ favorite: !draft.favorite })}
+          ><Star size={17} weight={draft.favorite ? "fill" : "regular"} /></Button>
+          <NoteColorPicker value={draft.color} disabled={metaLocked} onChange={(color) => updateNoteMeta({ color })} />
           <Button
             className={hasNotePassword ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" : "text-neutral-400"}
             variant="ghost"

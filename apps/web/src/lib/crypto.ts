@@ -13,6 +13,8 @@ interface ProtectedNotePayload {
   _type: typeof PROTECTED_NOTE_TYPE;
   title: string;
   tags: string[];
+  favorite?: boolean;
+  color?: string;
   salt: string;
   nonce: string;
   ciphertext: string;
@@ -23,6 +25,8 @@ export class LockedNoteError extends Error {
     readonly title: string,
     readonly tags: string[],
     readonly salt: string,
+    readonly favorite = false,
+    readonly color?: string,
   ) {
     super("This note requires its own password");
     this.name = "LockedNoteError";
@@ -70,6 +74,8 @@ function normalizeDocument(value: unknown): NoteDocument {
     title: typeof document.title === "string" ? document.title : "Untitled",
     markdown: typeof document.markdown === "string" ? document.markdown : "",
     tags: Array.isArray(document.tags) ? document.tags.filter((tag): tag is string => typeof tag === "string") : [],
+    ...(document.favorite === true && { favorite: true }),
+    ...(typeof document.color === "string" && { color: document.color }),
   };
 }
 
@@ -130,6 +136,8 @@ export async function encryptNote(
       _type: PROTECTED_NOTE_TYPE,
       title: document.title,
       tags: document.tags,
+      favorite: document.favorite,
+      color: document.color,
       salt: protection.salt,
       nonce: encode(protectedContent.nonce),
       ciphertext: encode(protectedContent.ciphertext),
@@ -164,7 +172,7 @@ export async function decryptNote(
     const payload = JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
     if (!isProtectedPayload(payload)) return normalizeDocument(payload);
     if (!protection || protection.salt !== payload.salt) {
-      throw new LockedNoteError(payload.title, payload.tags, payload.salt);
+      throw new LockedNoteError(payload.title, payload.tags, payload.salt, payload.favorite === true, typeof payload.color === "string" ? payload.color : undefined);
     }
     const protectedPlaintext = open(decode(payload.ciphertext), decode(payload.nonce), protection.key);
     return normalizeDocument(JSON.parse(new TextDecoder().decode(protectedPlaintext)));

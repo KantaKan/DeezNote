@@ -23,4 +23,7 @@ export interface NoteDocument {
   title: string;
   markdown: string;
   tags: string[];
+  favorite?: boolean;
+  /** One of the web app's note colour ids (e.g. "yellow"); absent means the default page colour. */
+  color?: string;
 }

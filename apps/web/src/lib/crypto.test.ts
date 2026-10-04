@@ -112,6 +112,26 @@ describe("note encryption", () => {
     await destroyKey(protection.key);
   });
 
+  test("keeps favorite and color visible on a locked note, but not its content", async () => {
+    const styled: NoteDocument = { ...document, favorite: true, color: "blue" };
+    const protection = await deriveNoteProtection("another strong note password");
+    const encrypted = await encryptNote(crypto.randomUUID(), styled, vaultKey, 0, protection);
+
+    try {
+      await decryptNote(encrypted, vaultKey);
+      throw new Error("Expected the protected note to stay locked");
+    } catch (reason) {
+      expect(reason).toBeInstanceOf(LockedNoteError);
+      const locked = reason as LockedNoteError;
+      expect(locked.favorite).toBe(true);
+      expect(locked.color).toBe("blue");
+      expect(locked).not.toHaveProperty("markdown");
+    }
+
+    expect(await decryptNote(encrypted, vaultKey, protection)).toEqual(styled);
+    await destroyKey(protection.key);
+  });
+
   test("normalizes old notes that were saved before tags existed", async () => {
     const legacy = { title: "Old note", markdown: "Still readable" } as NoteDocument;
     const encrypted = await encryptNote(crypto.randomUUID(), legacy, vaultKey, 0);

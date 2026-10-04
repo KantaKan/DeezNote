@@ -8,6 +8,13 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>DeezNote</title>
+    <script>
+      // Apply the saved theme before first paint so dark mode doesn't flash white. Mirrors src/lib/theme.ts.
+      try {
+        var theme = localStorage.getItem("deeznote-theme");
+        if (theme === "dark" || (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches)) document.documentElement.classList.add("dark");
+      } catch (error) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

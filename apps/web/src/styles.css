@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-note-yellow: #facc15;
   --animate-shake: shake .36s cubic-bezier(.36, .07, .19, .97);
   @keyframes shake {
     20%, 60% { transform: translateX(-5px); }
@@ -16,8 +17,9 @@
 
 :root {
   font-family: var(--font-sans);
-  color: #171717;
-  background: #ffffff;
+  color: var(--color-neutral-900);
+  background: var(--color-white);
+  color-scheme: light;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
 }
@@ -27,23 +29,162 @@ html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
 button, input { font-family: inherit; }
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
-::selection { background: #fde68a; color: #171717; }
+::selection { background: var(--color-amber-200); color: var(--color-neutral-900); }
+
+/* Dark mode flips Tailwind's palette in one place: every bg-white / text-neutral-* / bg-amber-50
+   utility reads these variables, so components don't need separate dark: classes. */
+:root.dark {
+  color-scheme: dark;
+  --color-white: oklch(17.5% 0.004 90);
+  --color-neutral-50: oklch(20.5% 0.004 90);
+  --color-neutral-100: oklch(24% 0.004 90);
+  --color-neutral-200: oklch(29% 0.004 90);
+  --color-neutral-300: oklch(37% 0.004 90);
+  --color-neutral-400: oklch(55% 0.004 90);
+  --color-neutral-500: oklch(66% 0.004 90);
+  --color-neutral-600: oklch(76% 0.004 90);
+  --color-neutral-700: oklch(84% 0.003 90);
+  --color-neutral-800: oklch(90% 0.002 90);
+  --color-neutral-900: oklch(94% 0.002 90);
+  --color-neutral-950: oklch(97% 0.002 90);
+  --color-amber-50: oklch(27.9% 0.077 45.635);
+  --color-amber-100: oklch(41.4% 0.112 45.904);
+  --color-amber-200: oklch(47.3% 0.137 46.201);
+  --color-amber-300: oklch(55.5% 0.163 48.998);
+  --color-amber-400: oklch(66.6% 0.179 58.318);
+  --color-amber-500: oklch(76.9% 0.188 70.08);
+  --color-amber-600: oklch(82.8% 0.189 84.429);
+  --color-amber-700: oklch(87.9% 0.169 91.605);
+  --color-amber-800: oklch(92.4% 0.12 95.746);
+  --color-amber-900: oklch(96.2% 0.059 95.617);
+  --color-amber-950: oklch(98.7% 0.022 95.277);
+  --color-red-50: oklch(25.8% 0.092 26.042);
+  --color-red-100: oklch(39.6% 0.141 25.723);
+  --color-red-200: oklch(44.4% 0.177 26.899);
+  --color-red-300: oklch(50.5% 0.213 27.518);
+  --color-red-400: oklch(57.7% 0.245 27.325);
+  --color-red-500: oklch(63.7% 0.237 25.331);
+  --color-red-600: oklch(70.4% 0.191 22.216);
+  --color-red-700: oklch(80.8% 0.114 19.571);
+  --color-red-800: oklch(88.5% 0.062 18.334);
+  --color-red-900: oklch(93.6% 0.032 17.717);
+  --color-red-950: oklch(97.1% 0.013 17.38);
+  --color-orange-50: oklch(26.6% 0.079 36.259);
+  --color-orange-100: oklch(40.8% 0.123 38.172);
+  --color-orange-200: oklch(47% 0.157 37.304);
+  --color-orange-300: oklch(55.3% 0.195 38.402);
+  --color-orange-400: oklch(64.6% 0.222 41.116);
+  --color-orange-500: oklch(70.5% 0.213 47.604);
+  --color-orange-600: oklch(75% 0.183 55.934);
+  --color-orange-700: oklch(83.7% 0.128 66.29);
+  --color-orange-800: oklch(90.1% 0.076 70.697);
+  --color-orange-900: oklch(95.4% 0.038 75.164);
+  --color-orange-950: oklch(98% 0.016 73.684);
+  --color-lime-50: oklch(27.4% 0.072 132.109);
+  --color-lime-100: oklch(40.5% 0.101 131.063);
+  --color-lime-200: oklch(45.3% 0.124 130.933);
+  --color-lime-300: oklch(53.2% 0.157 131.589);
+  --color-lime-400: oklch(64.8% 0.2 131.684);
+  --color-lime-500: oklch(76.8% 0.233 130.85);
+  --color-lime-600: oklch(84.1% 0.238 128.85);
+  --color-lime-700: oklch(89.7% 0.196 126.665);
+  --color-lime-800: oklch(93.8% 0.127 124.321);
+  --color-lime-900: oklch(96.7% 0.067 122.328);
+  --color-lime-950: oklch(98.6% 0.031 120.757);
+  --color-emerald-50: oklch(26.2% 0.051 172.552);
+  --color-emerald-100: oklch(37.8% 0.077 168.94);
+  --color-emerald-200: oklch(43.2% 0.095 166.913);
+  --color-emerald-300: oklch(50.8% 0.118 165.612);
+  --color-emerald-400: oklch(59.6% 0.145 163.225);
+  --color-emerald-500: oklch(69.6% 0.17 162.48);
+  --color-emerald-600: oklch(76.5% 0.177 163.223);
+  --color-emerald-700: oklch(84.5% 0.143 164.978);
+  --color-emerald-800: oklch(90.5% 0.093 164.15);
+  --color-emerald-900: oklch(95% 0.052 163.051);
+  --color-emerald-950: oklch(97.9% 0.021 166.113);
+  --color-cyan-50: oklch(30.2% 0.056 229.695);
+  --color-cyan-100: oklch(39.8% 0.07 227.392);
+  --color-cyan-200: oklch(45% 0.085 224.283);
+  --color-cyan-300: oklch(52% 0.105 223.128);
+  --color-cyan-400: oklch(60.9% 0.126 221.723);
+  --color-cyan-500: oklch(71.5% 0.143 215.221);
+  --color-cyan-600: oklch(78.9% 0.154 211.53);
+  --color-cyan-700: oklch(86.5% 0.127 207.078);
+  --color-cyan-800: oklch(91.7% 0.08 205.041);
+  --color-cyan-900: oklch(95.6% 0.045 203.388);
+  --color-cyan-950: oklch(98.4% 0.019 200.873);
+  --color-blue-50: oklch(28.2% 0.091 267.935);
+  --color-blue-100: oklch(37.9% 0.146 265.522);
+  --color-blue-200: oklch(42.4% 0.199 265.638);
+  --color-blue-300: oklch(48.8% 0.243 264.376);
+  --color-blue-400: oklch(54.6% 0.245 262.881);
+  --color-blue-500: oklch(62.3% 0.214 259.815);
+  --color-blue-600: oklch(70.7% 0.165 254.624);
+  --color-blue-700: oklch(80.9% 0.105 251.813);
+  --color-blue-800: oklch(88.2% 0.059 254.128);
+  --color-blue-900: oklch(93.2% 0.032 255.585);
+  --color-blue-950: oklch(97% 0.014 254.604);
+  --color-violet-50: oklch(28.3% 0.141 291.089);
+  --color-violet-100: oklch(38% 0.189 293.745);
+  --color-violet-200: oklch(43.2% 0.232 292.759);
+  --color-violet-300: oklch(49.1% 0.27 292.581);
+  --color-violet-400: oklch(54.1% 0.281 293.009);
+  --color-violet-500: oklch(60.6% 0.25 292.717);
+  --color-violet-600: oklch(70.2% 0.183 293.541);
+  --color-violet-700: oklch(81.1% 0.111 293.571);
+  --color-violet-800: oklch(89.4% 0.057 293.283);
+  --color-violet-900: oklch(94.3% 0.029 294.588);
+  --color-violet-950: oklch(96.9% 0.016 293.756);
+  --color-pink-50: oklch(28.4% 0.109 3.907);
+  --color-pink-100: oklch(40.8% 0.153 2.432);
+  --color-pink-200: oklch(45.9% 0.187 3.815);
+  --color-pink-300: oklch(52.5% 0.223 3.958);
+  --color-pink-400: oklch(59.2% 0.249 0.584);
+  --color-pink-500: oklch(65.6% 0.241 354.308);
+  --color-pink-600: oklch(71.8% 0.202 349.761);
+  --color-pink-700: oklch(82.3% 0.12 346.018);
+  --color-pink-800: oklch(89.9% 0.061 343.231);
+  --color-pink-900: oklch(94.8% 0.028 342.258);
+  --color-pink-950: oklch(97.1% 0.014 343.198);
+}
+
+/* Per-note colours: --note-page tints the editor page, --note-card the sidebar card. */
+.note-color-yellow { --note-page: #fefbe8; --note-card: #fdf3c4; }
+.note-color-orange { --note-page: #fff7ed; --note-card: #ffe8cf; }
+.note-color-red    { --note-page: #fef4f4; --note-card: #fde0e0; }
+.note-color-pink   { --note-page: #fdf2f8; --note-card: #fbe1f0; }
+.note-color-purple { --note-page: #f7f5ff; --note-card: #e9e4fd; }
+.note-color-blue   { --note-page: #f1f7ff; --note-card: #dae8fd; }
+.note-color-teal   { --note-page: #f0fdfa; --note-card: #cdf5ec; }
+.note-color-green  { --note-page: #f2fdf5; --note-card: #d8f6e2; }
+.note-color-gray   { --note-page: #f6f6f4; --note-card: #e6e5e1; }
+.dark .note-color-yellow { --note-page: #1f1d12; --note-card: #2e2a15; }
+.dark .note-color-orange { --note-page: #221a12; --note-card: #332314; }
+.dark .note-color-red    { --note-page: #241617; --note-card: #371c1d; }
+.dark .note-color-pink   { --note-page: #231620; --note-card: #351b2d; }
+.dark .note-color-purple { --note-page: #1b1826; --note-card: #272039; }
+.dark .note-color-blue   { --note-page: #141b26; --note-card: #182539; }
+.dark .note-color-teal   { --note-page: #121f1d; --note-card: #152e2a; }
+.dark .note-color-green  { --note-page: #141f17; --note-card: #182e1f; }
+.dark .note-color-gray   { --note-page: #1d1d1b; --note-card: #2a2a27; }
+.note-page { background: var(--note-page, var(--color-white)); transition: background-color .2s; }
+.note-card { background: var(--note-card); }
 
 /* Milkdown/Crepe is kept borderless so the editor reads as one page. */
 .milkdown-host .milkdown {
-  --crepe-color-background: #ffffff;
-  --crepe-color-on-background: #262626;
-  --crepe-color-surface: #fafafa;
-  --crepe-color-surface-low: #f5f5f5;
-  --crepe-color-on-surface: #262626;
-  --crepe-color-on-surface-variant: #525252;
-  --crepe-color-outline: #d4d4d4;
-  --crepe-color-primary: #b45309;
-  --crepe-color-secondary: #fef3c7;
-  --crepe-color-on-secondary: #78350f;
-  --crepe-color-hover: #f5f5f5;
-  --crepe-color-selected: #fef3c7;
-  --crepe-color-inline-area: #f5f5f5;
+  --crepe-color-background: transparent;
+  --crepe-color-on-background: var(--color-neutral-800);
+  --crepe-color-surface: var(--color-neutral-50);
+  --crepe-color-surface-low: var(--color-neutral-100);
+  --crepe-color-on-surface: var(--color-neutral-800);
+  --crepe-color-on-surface-variant: var(--color-neutral-600);
+  --crepe-color-outline: var(--color-neutral-300);
+  --crepe-color-primary: var(--color-amber-700);
+  --crepe-color-secondary: var(--color-amber-100);
+  --crepe-color-on-secondary: var(--color-amber-900);
+  --crepe-color-hover: var(--color-neutral-100);
+  --crepe-color-selected: var(--color-amber-100);
+  --crepe-color-inline-area: var(--color-neutral-100);
   --crepe-base-font-size: 1rem;
   --crepe-font-title: var(--font-sans);
   --crepe-font-default: var(--font-sans);
@@ -52,7 +193,7 @@ button:disabled { cursor: not-allowed; }
 .milkdown-host .milkdown .ProseMirror {
   min-height: calc(100vh - 17rem);
   padding: 0 0 7rem;
-  color: #292524;
+  color: var(--color-neutral-800);
   font-family: var(--font-sans);
   line-height: 1.8;
 }
@@ -77,9 +218,9 @@ button:disabled { cursor: not-allowed; }
   width: 18px;
   height: 18px;
   transform: none;
-  border: 2px solid #fff;
+  border: 2px solid var(--color-white);
   border-radius: 999px;
-  background: #171717;
+  background: var(--color-neutral-900);
   box-shadow: 0 1px 4px rgb(0 0 0 / .25);
   opacity: 0;
   transition: opacity .15s, transform .15s;
@@ -92,7 +233,7 @@ button:disabled { cursor: not-allowed; }
 .milkdown-host .milkdown .milkdown-image-block > .image-wrapper:hover img { box-shadow: 0 0 0 2px rgb(23 23 23 / .08); }
 
 .markdown-preview {
-  color: #292524;
+  color: var(--color-neutral-800);
   font-size: 1rem;
   line-height: 1.8;
 }
@@ -100,7 +241,7 @@ button:disabled { cursor: not-allowed; }
 .markdown-preview h1,
 .markdown-preview h2,
 .markdown-preview h3 {
-  color: #171717;
+  color: var(--color-neutral-900);
   font-weight: 700;
   letter-spacing: -.025em;
   line-height: 1.25;
@@ -114,25 +255,25 @@ button:disabled { cursor: not-allowed; }
 .markdown-preview ol { margin: .85em 0; padding-left: 1.5rem; }
 .markdown-preview ul { list-style: disc; }
 .markdown-preview ol { list-style: decimal; }
-.markdown-preview a { color: #b45309; text-decoration: underline; text-underline-offset: 3px; }
+.markdown-preview a { color: var(--color-amber-700); text-decoration: underline; text-underline-offset: 3px; }
 .markdown-preview blockquote {
   margin: 1.25rem 0;
-  border-left: 3px solid #facc15;
+  border-left: 3px solid var(--color-amber-400);
   padding-left: 1rem;
-  color: #737373;
+  color: var(--color-neutral-500);
 }
 .markdown-preview code {
   border-radius: .3rem;
-  background: #f5f5f5;
+  background: var(--color-neutral-100);
   padding: .15rem .35rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: .86em;
 }
 .markdown-preview pre {
   overflow-x: auto;
-  border: 1px solid #e5e5e5;
+  border: 1px solid var(--color-neutral-200);
   border-radius: .75rem;
-  background: #fafafa;
+  background: var(--color-neutral-50);
   padding: 1rem;
 }
 .markdown-preview pre code { background: transparent; padding: 0; }
@@ -142,7 +283,7 @@ button:disabled { cursor: not-allowed; }
   border-radius: .85rem;
   box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 8px 24px rgb(0 0 0 / .06);
 }
-.markdown-preview hr { margin: 2rem 0; border: 0; border-top: 1px solid #e5e5e5; }
+.markdown-preview hr { margin: 2rem 0; border: 0; border-top: 1px solid var(--color-neutral-200); }
 
 @media (max-width: 640px) {
   .milkdown-host .milkdown .ProseMirror { font-size: 1rem; }
