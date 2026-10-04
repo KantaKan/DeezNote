@@ -1,0 +1,40 @@
+{
+  "name": "@save-text/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "typecheck": "tsc -b",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@milkdown/crepe": "7.22.2",
+    "@milkdown/kit": "7.22.2",
+    "@phosphor-icons/react": "2.1.10",
+    "@radix-ui/react-slot": "1.3.3",
+    "@save-text/shared": "*",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "dexie": "4.4.6",
+    "dompurify": "3.4.16",
+    "libsodium-wrappers-sumo": "0.8.4",
+    "marked": "18.0.14",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwind-merge": "3.7.0",
+    "workbox-window": "7.4.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.3.0",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/bun": "1.4.2",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vite": "8.3.2",
+    "vite-plugin-pwa": "2.0.0"
+  }
+}

@@ -1,0 +1,150 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --color-note-yellow: #facc15;
+  --animate-shake: shake .36s cubic-bezier(.36, .07, .19, .97);
+  @keyframes shake {
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake { animation: none; }
+}
+
+:root {
+  font-family: var(--font-sans);
+  color: #171717;
+  background: #ffffff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
+button, input { font-family: inherit; }
+button { cursor: pointer; }
+button:disabled { cursor: not-allowed; }
+::selection { background: #fde68a; color: #171717; }
+
+/* Milkdown/Crepe is kept borderless so the editor reads as one page. */
+.milkdown-host .milkdown {
+  --crepe-color-background: #ffffff;
+  --crepe-color-on-background: #262626;
+  --crepe-color-surface: #fafafa;
+  --crepe-color-surface-low: #f5f5f5;
+  --crepe-color-on-surface: #262626;
+  --crepe-color-on-surface-variant: #525252;
+  --crepe-color-outline: #d4d4d4;
+  --crepe-color-primary: #b45309;
+  --crepe-color-secondary: #fef3c7;
+  --crepe-color-on-secondary: #78350f;
+  --crepe-color-hover: #f5f5f5;
+  --crepe-color-selected: #fef3c7;
+  --crepe-color-inline-area: #f5f5f5;
+  --crepe-base-font-size: 1rem;
+  --crepe-font-title: var(--font-sans);
+  --crepe-font-default: var(--font-sans);
+  background: transparent;
+}
+.milkdown-host .milkdown .ProseMirror {
+  min-height: calc(100vh - 17rem);
+  padding: 0 0 7rem;
+  color: #292524;
+  font-family: var(--font-sans);
+  line-height: 1.8;
+}
+.milkdown-host .milkdown .ProseMirror:focus { outline: none; }
+.milkdown-host .milkdown .ProseMirror h1,
+.milkdown-host .milkdown .ProseMirror h2,
+.milkdown-host .milkdown .ProseMirror h3 { font-family: var(--font-sans); letter-spacing: -.025em; }
+.milkdown-host .milkdown img { border-radius: .85rem; }
+
+/* Image resizing: the image keeps its aspect ratio (width follows the dragged height),
+   and the built-in bottom bar becomes a corner grip you can drag diagonally. */
+.milkdown-host .milkdown .milkdown-image-block > .image-wrapper img {
+  width: auto;
+  object-fit: contain;
+  min-height: 60px;
+}
+.milkdown-host .milkdown .milkdown-image-block > .image-wrapper > .image-resize-handle {
+  left: auto;
+  right: -6px;
+  bottom: -6px;
+  top: auto;
+  width: 18px;
+  height: 18px;
+  transform: none;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #171717;
+  box-shadow: 0 1px 4px rgb(0 0 0 / .25);
+  opacity: 0;
+  transition: opacity .15s, transform .15s;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+.milkdown-host .milkdown .milkdown-image-block:hover > .image-wrapper > .image-resize-handle,
+.milkdown-host .milkdown .milkdown-image-block.selected > .image-wrapper > .image-resize-handle { opacity: 1; }
+.milkdown-host .milkdown .milkdown-image-block > .image-wrapper > .image-resize-handle:hover { cursor: nwse-resize; transform: scale(1.15); }
+.milkdown-host .milkdown .milkdown-image-block > .image-wrapper:hover img { box-shadow: 0 0 0 2px rgb(23 23 23 / .08); }
+
+.markdown-preview {
+  color: #292524;
+  font-size: 1rem;
+  line-height: 1.8;
+}
+.markdown-preview > :first-child { margin-top: 0; }
+.markdown-preview h1,
+.markdown-preview h2,
+.markdown-preview h3 {
+  color: #171717;
+  font-weight: 700;
+  letter-spacing: -.025em;
+  line-height: 1.25;
+  margin: 1.8em 0 .65em;
+}
+.markdown-preview h1 { font-size: 2rem; }
+.markdown-preview h2 { font-size: 1.5rem; }
+.markdown-preview h3 { font-size: 1.2rem; }
+.markdown-preview p { margin: .85em 0; }
+.markdown-preview ul,
+.markdown-preview ol { margin: .85em 0; padding-left: 1.5rem; }
+.markdown-preview ul { list-style: disc; }
+.markdown-preview ol { list-style: decimal; }
+.markdown-preview a { color: #b45309; text-decoration: underline; text-underline-offset: 3px; }
+.markdown-preview blockquote {
+  margin: 1.25rem 0;
+  border-left: 3px solid #facc15;
+  padding-left: 1rem;
+  color: #737373;
+}
+.markdown-preview code {
+  border-radius: .3rem;
+  background: #f5f5f5;
+  padding: .15rem .35rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .86em;
+}
+.markdown-preview pre {
+  overflow-x: auto;
+  border: 1px solid #e5e5e5;
+  border-radius: .75rem;
+  background: #fafafa;
+  padding: 1rem;
+}
+.markdown-preview pre code { background: transparent; padding: 0; }
+.markdown-preview img {
+  max-width: 100%;
+  margin: 1.5rem 0;
+  border-radius: .85rem;
+  box-shadow: 0 1px 2px rgb(0 0 0 / .06), 0 8px 24px rgb(0 0 0 / .06);
+}
+.markdown-preview hr { margin: 2rem 0; border: 0; border-top: 1px solid #e5e5e5; }
+
+@media (max-width: 640px) {
+  .milkdown-host .milkdown .ProseMirror { font-size: 1rem; }
+  .markdown-preview { font-size: 1rem; }
+}
