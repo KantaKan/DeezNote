@@ -13,10 +13,12 @@ set -euo pipefail
 
 DOMAIN="${1:?usage: setup-server.sh <domain> \"<ssh public key>\" [trusted-proxy-ips]}"
 DEPLOY_PUBLIC_KEY="${2:?usage: setup-server.sh <domain> \"<ssh public key>\" [trusted-proxy-ips]}"
-TRUSTED_PROXY_IPS="${3:-}"
-# Prevent newlines/systemd syntax in the generated Environment value. The app validates IPs.
-if [[ ! "$TRUSTED_PROXY_IPS" =~ ^[0-9a-fA-F:.,\ ]*$ ]]; then
-  echo "trusted-proxy-ips must be a comma-separated list of IP addresses" >&2; exit 1
+# Caddy reaches the API from a Docker network whose container IP changes when Caddy is recreated, so the
+# default trusts Docker's private range. Safe because the API only listens on the Docker bridge (firewalled).
+TRUSTED_PROXY_IPS="${3:-172.16.0.0/12}"
+# Prevent newlines/systemd syntax in the generated Environment value. The app validates the entries.
+if [[ ! "$TRUSTED_PROXY_IPS" =~ ^[0-9a-fA-F:.,/\ ]*$ ]]; then
+  echo "trusted-proxy-ips must be a comma-separated list of IP addresses or IPv4 ranges" >&2; exit 1
 fi
 BUN_VERSION="1.4.2"
 APP_USER="deeznote"

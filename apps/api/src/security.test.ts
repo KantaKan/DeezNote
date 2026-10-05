@@ -187,6 +187,19 @@ describe("limiter and proxy trust", () => {
     expect(() => new Security({ ...config.security, trustedProxyIps: ["*"] })).toThrow();
   });
 
+  test("trusts an IPv4 proxy range, so a recreated Caddy container keeps working", () => {
+    const security = new Security({ ...config.security, trustedProxyIps: ["172.16.0.0/12"] });
+    const request = new Request("http://localhost/", { headers: { "X-Forwarded-For": "198.51.100.1, 203.0.113.5" } });
+    expect(security.clientIp(request, "172.18.0.2")).toBe("203.0.113.5");
+    expect(security.clientIp(request, "::ffff:172.31.255.254")).toBe("203.0.113.5");
+    expect(security.clientIp(request, "172.32.0.1")).toBe("172.32.0.1");
+    expect(security.clientIp(request, "192.0.2.8")).toBe("192.0.2.8");
+    expect(security.clientIp(request, "::1")).toBe("::1");
+    for (const bad of ["172.16.0.0/7", "172.16.0.0/33", "172.16.0.0/x", "::/64", "172.16.0.0/12/1", "999.1.1.1/16"]) {
+      expect(() => new Security({ ...config.security, trustedProxyIps: [bad] })).toThrow();
+    }
+  });
+
   test("hash slots are released even when work throws", async () => {
     const security = new Security({ ...config.security, maxConcurrentHashes: 1 });
     await expect(security.withPasswordHash(async () => { throw new Error("hash failed"); })).rejects.toThrow("hash failed");

@@ -44,20 +44,44 @@ function normalizeIp(ip: string) {
   return ip.startsWith("::ffff:") && isIP(ip.slice(7)) === 4 ? ip.slice(7) : ip;
 }
 
+function ipv4ToNumber(ip: string) {
+  return ip.split(".").reduce((value, octet) => value * 256 + Number(octet), 0);
+}
+
+/**
+ * A trusted-proxy entry: an exact IP, or an IPv4 range such as "172.16.0.0/12". Ranges exist because
+ * Docker reassigns Caddy's container IP when it is recreated; the API itself is only reachable from
+ * Docker networks (bound to the bridge IP, firewalled), so trusting Docker's private range is safe there.
+ */
+function parseTrustedProxy(entry: string): (ip: string) => boolean {
+  const [base, bits, ...rest] = entry.split("/");
+  if (bits === undefined) {
+    if (!isIP(entry)) throw new Error("API_TRUSTED_PROXY_IPS must contain IP addresses or IPv4 ranges");
+    const exact = normalizeIp(entry);
+    return (ip) => ip === exact;
+  }
+  const prefix = Number(bits);
+  if (rest.length || isIP(base) !== 4 || !/^\d{1,2}$/.test(bits) || prefix < 8 || prefix > 32) {
+    throw new Error("API_TRUSTED_PROXY_IPS ranges must be IPv4 with a /8 to /32 prefix");
+  }
+  const size = 2 ** (32 - prefix);
+  const start = Math.floor(ipv4ToNumber(base) / size) * size;
+  return (ip) => isIP(ip) === 4 && ipv4ToNumber(ip) >= start && ipv4ToNumber(ip) < start + size;
+}
+
 export class Security {
   private readonly limiter: RateLimiter;
   private activeHashes = 0;
-  private readonly trustedProxies: Set<string>;
+  private readonly trustedProxies: Array<(ip: string) => boolean>;
   constructor(readonly options: SecurityOptions = config.security, now = Date.now) {
     this.limiter = new RateLimiter(options.maxRateLimitKeys, now);
-    if (options.trustedProxyIps.some((ip) => !isIP(ip))) throw new Error("API_TRUSTED_PROXY_IPS must contain IP addresses");
-    this.trustedProxies = new Set(options.trustedProxyIps.map(normalizeIp));
+    this.trustedProxies = options.trustedProxyIps.map(parseTrustedProxy);
   }
 
   clientIp(request: Request, peer?: string) {
     if (!peer) return "unknown"; // app.handle() has no socket; never fall back to an untrusted header.
     const address = normalizeIp(peer);
-    if (!this.trustedProxies.has(address)) return address;
+    if (!this.trustedProxies.some((matches) => matches(address))) return address;
     // Caddy appends the actual connecting client as the rightmost X-Forwarded-For entry.
     const forwarded = request.headers.get("x-forwarded-for")?.split(",").at(-1)?.trim();
     return forwarded && isIP(forwarded) ? normalizeIp(forwarded) : address;

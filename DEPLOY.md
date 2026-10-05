@@ -146,29 +146,30 @@ These request caps are not per-account storage quotas or full validation of encr
 ### Configure Caddy trust before public launch
 
 By default, `X-Forwarded-For` and `X-Real-IP` are ignored. With a reverse proxy this means clients share the
-proxy's IP allowance until you configure `API_TRUSTED_PROXY_IPS` with the **exact socket-peer IPs of Caddy**.
+proxy's IP allowance until you configure `API_TRUSTED_PROXY_IPS` with **Caddy's socket-peer IPs or their range**.
 The API bind address (`172.17.0.1`) is usually NOT Caddy's source IP.
 
-Find the Caddy container's network addresses on the droplet:
+The setup script defaults to `172.16.0.0/12` (Docker's private range). That survives Caddy being recreated with a
+new container IP, and is safe here because the API listens only on the Docker bridge and ufw admits only Docker
+networks to its port. To pin an exact IP instead, find Caddy's address:
 
 ```bash
 docker inspect exam-prod-caddy-1 --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\\n"}}{{end}}'
 ```
 
-Choose the address on the network that connects to the API, then either supply it as the setup script's third
-argument or add a systemd override with `sudo systemctl edit deeznote-api`:
+and supply it as the setup script's third argument, or add a systemd override with `sudo systemctl edit deeznote-api`:
 
 ```ini
 [Service]
-Environment="API_TRUSTED_PROXY_IPS=172.18.0.2"
+Environment="API_TRUSTED_PROXY_IPS=172.16.0.0/12"
 ```
 
-Replace that example IP with the actual address, then run `sudo systemctl daemon-reload` and
+After changing it, run `sudo systemctl daemon-reload` and
 `sudo systemctl restart deeznote-api`. For allowlisted peers only, the API uses the rightmost valid
 `X-Forwarded-For` IP appended by Caddy. Keep Caddy's default behavior of rebuilding/appending this header;
 do not configure it to pass through a client-supplied value unchanged. Additional upstream proxies require
 reviewing the trust chain before changing this policy. Keep the API bound privately and firewall access
-restricted to the proxy. Prefer a stable container IP; update the allowlist if Caddy's IP changes.
+restricted to the proxy. With an exact IP, update the allowlist whenever Caddy's IP changes.
 
 Apply the web security-header block in step 3 to an existing Caddy site too; deploying the API alone does not
 change Caddy configuration. The web CSP above blocks framing, objects, and foreign base URLs, but is NOT a strict
