@@ -114,6 +114,7 @@ https://deeznote.103-253-146-20.sslip.io. The first visit can take a few seconds
 | API status / memory | `systemctl status deeznote-api` |
 | Which release is live | `readlink /srv/deeznote/current` |
 | Roll back by hand | `ln -sfn /srv/deeznote/releases/<older-sha> /srv/deeznote/current && systemctl restart deeznote-api` |
+| `/api` returns 502 | Caddy can't reach the API. With ufw on, it needs: `ufw allow proto tcp from 172.16.0.0/12 to 172.17.0.1 port 3100` (the setup script adds this) |
 | Back up the database | `sqlite3 /var/lib/deeznote/deeznote.db ".backup /root/deeznote-$(date +%F).db"` |
 
 Rollbacks switch the code, not the database. Migrations only ever add to the schema, so an older release keeps working

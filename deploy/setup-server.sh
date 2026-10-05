@@ -36,6 +36,13 @@ DOCKER_HOST_IP="$(ip -4 -o addr show docker0 2>/dev/null | awk '{print $4}' | cu
 DOCKER_HOST_IP="${DOCKER_HOST_IP:-172.17.0.1}"
 echo "==> API will listen on $DOCKER_HOST_IP:$API_PORT"
 
+# With ufw active (incoming policy: drop), the Caddy container, which sits on its own compose
+# network, can't reach the host. Allow only Docker's private ranges to the API port.
+if command -v ufw >/dev/null 2>&1 && ufw status | grep -q "Status: active"; then
+  echo "==> ufw: allow Docker networks to reach the API"
+  ufw allow proto tcp from 172.16.0.0/12 to "$DOCKER_HOST_IP" port "$API_PORT" comment "DeezNote API from Docker networks" >/dev/null
+fi
+
 echo "==> User and folders"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash "$APP_USER"
 install -d -o "$APP_USER" -g "$APP_USER" -m 755 "$APP_DIR" "$APP_DIR/releases"
