@@ -12,6 +12,8 @@ import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
 import { NoteColorPicker } from "./NoteColorPicker";
+import { EmptyState, welcomeNote } from "./Onboarding";
+import { Tour, tourDone, type TourStep } from "./Tour";
 import { ProtectNoteDialog, UnlockNoteCard } from "./NoteLock";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -25,6 +27,8 @@ interface OpenNote {
 
 interface Props {
   vaultKey: Uint8Array;
+  /** Right after the vault was created: seed the welcome note (once). */
+  firstRun?: boolean;
   onLock: () => void;
   onLogout: () => void;
 }
@@ -35,6 +39,13 @@ const MarkdownEditor = lazy(async () => {
 });
 
 const AUTOSAVE_DELAY = 900;
+
+const TOUR_STEPS: TourStep[] = [
+  { target: "new-note", title: "Start a note", body: "Click here, or press the shortcut shown, any time. Notes save on their own as you type." },
+  { target: "favourite", title: "Star and colour", body: "Starred notes stay at the top. The palette next to the star gives a note its own page colour." },
+  { target: "note-lock", title: "A second lock", body: "Give a sensitive note its own password, on top of your vault passphrase." },
+  { target: "theme", title: "Light, dark and lock", body: "Switch themes here. The lock beside it closes your vault when you step away." },
+];
 
 // The editor saves an image's resize ratio as its alt text (e.g. `![0.62](…)`); apply it in preview too.
 DOMPurify.addHook("afterSanitizeAttributes", (node) => {
@@ -65,7 +76,7 @@ function tagColor(tag: string) {
   return TAG_COLORS[hash % TAG_COLORS.length];
 }
 
-export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
+export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }: Props) {
   const [notes, setNotes] = useState<OpenNote[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [draft, setDraft] = useState<NoteDocument>({ title: "", markdown: "", tags: [] });
@@ -85,6 +96,9 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
   const [protectDialogOpen, setProtectDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const welcomeSeeded = useRef(false);
+  const [showTour, setShowTour] = useState(() => !tourDone());
   const theme = useTheme();
 
   const loadNotes = useCallback(async () => {
@@ -124,6 +138,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
       setDraft(opened[0].document);
     }
     setMessage(opened.length ? "All changes saved" : "No notes yet. Make the first one.");
+    setLoaded(true);
   }, [vaultKey]);
 
   useEffect(() => () => {
@@ -188,6 +203,17 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
         if (savesInFlight.current === 0) setSaving(false);
       });
   }, [performSave]);
+
+  // A brand-new vault starts with one real, encrypted note that explains the app. It's an ordinary note.
+  useEffect(() => {
+    if (!firstRun || !loaded || welcomeSeeded.current || notes.length) return;
+    welcomeSeeded.current = true;
+    const id = crypto.randomUUID();
+    const welcome = welcomeNote(NEW_NOTE_SHORTCUT);
+    setSelectedId(id);
+    setDraft(welcome);
+    queueSave(welcome, id);
+  }, [firstRun, loaded, notes.length, queueSave]);
 
   useEffect(() => {
     if (!dirty) return;
@@ -390,7 +416,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
           <Button className="md:hidden" variant="ghost" size="icon-sm" title="Close sidebar" onClick={() => setSidebarOpen(false)}><X size={17} /></Button>
         </header>
 
-        <Button className="mx-3 mb-3 justify-start gap-2.5 px-3 shadow-sm" title={`New note (${NEW_NOTE_SHORTCUT})`} onClick={newNote}>
+        <Button data-tour="new-note" className="mx-3 mb-3 justify-start gap-2.5 px-3 shadow-sm" title={`New note (${NEW_NOTE_SHORTCUT})`} onClick={newNote}>
           <Plus size={16} weight="bold" />
           New note
           <kbd className="ml-auto rounded bg-white/10 px-1.5 py-0.5 font-sans text-[0.6875rem] text-neutral-400">{NEW_NOTE_SHORTCUT}</kbd>
@@ -414,7 +440,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
 
         <footer className="flex h-14 items-center justify-between border-t border-neutral-200 px-3">
           <span className={`flex items-center gap-1.5 text-[0.6875rem] font-medium ${online ? "text-emerald-600" : "text-orange-600"}`}>{online ? <CloudCheck size={15} weight="duotone" /> : <WifiSlash size={15} weight="duotone" />}{online ? "Synced" : "Offline"}</span>
-          <div className="flex"><Button variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button className="hover:bg-red-50 hover:text-red-600" variant="ghost" size="icon-sm" title="Delete account" onClick={() => setDeleteAccountOpen(true)}><UserMinus size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
+          <div className="flex"><Button data-tour="theme" variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button className="hover:bg-red-50 hover:text-red-600" variant="ghost" size="icon-sm" title="Delete account" onClick={() => setDeleteAccountOpen(true)}><UserMinus size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
         </footer>
       </div>
     </aside>
@@ -429,6 +455,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
           <span className={`hidden text-[0.6875rem] sm:block ${dirty ? "text-amber-600" : "text-neutral-400"}`}>{saving ? "Saving…" : message}</span>
           <div className="flex rounded-lg bg-neutral-100 p-0.5 text-xs"><button className={`rounded-md px-2.5 py-1.5 transition ${!preview ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`} onClick={() => setPreview(false)}>Edit</button><button className={`rounded-md px-2.5 py-1.5 transition ${preview ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500"}`} onClick={() => setPreview(true)}>Preview</button></div>
           <Button
+            data-tour="favourite"
             className={draft.favorite ? "text-amber-500 hover:bg-amber-50 hover:text-amber-600" : "text-neutral-400"}
             variant="ghost"
             size="icon-sm"
@@ -439,6 +466,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
           ><Star size={17} weight={draft.favorite ? "fill" : "regular"} /></Button>
           <NoteColorPicker value={draft.color} disabled={metaLocked} onChange={(color) => updateNoteMeta({ color })} />
           <Button
+            data-tour="note-lock"
             className={hasNotePassword ? "text-amber-600 hover:bg-amber-50 hover:text-amber-700" : "text-neutral-400"}
             variant="ghost"
             size="icon-sm"
@@ -456,6 +484,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
       </header>
 
       <section className="mx-auto h-[calc(100vh-3.5rem)] max-w-[850px] overflow-y-auto px-6 pt-12 sm:px-12 sm:pt-16">
+        {loaded && !notes.length && !selectedId ? <EmptyState onNewNote={newNote} shortcut={NEW_NOTE_SHORTCUT} /> : <>
         <input ref={titleRef} className="w-full border-0 bg-transparent text-4xl font-bold leading-[1.05] tracking-[-.045em] text-neutral-950 outline-none placeholder:text-neutral-300 disabled:cursor-default sm:text-5xl lg:text-6xl" value={draft.title} onChange={(event) => changeDraft({ ...draft, title: event.target.value })} placeholder="Untitled" disabled={currentNote?.locked} />
         <div className="mt-3 text-[0.6875rem] text-neutral-400">Encrypted note <span className="px-1 text-neutral-300">·</span> Autosaves as you write</div>
         <div className="mt-5 flex min-h-8 flex-wrap items-center gap-1.5">
@@ -486,6 +515,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
                 <MarkdownEditor key={selectedId ?? "new-note"} initialValue={draft.markdown} onChange={(markdown) => changeDraft({ ...draft, markdown })} />
               </Suspense>
             </div>}
+        </>}
       </section>
     </main>
     {deleteDialogOpen && <DeleteNoteDialog
@@ -496,6 +526,8 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
       onConfirm={deleteCurrentNote}
       onClose={() => setDeleteDialogOpen(false)}
     />}
+    {/* Wait for the first load (and the welcome note) so the tour points at a populated workspace. */}
+    {showTour && loaded && (!firstRun || notes.length > 0) && <Tour steps={TOUR_STEPS} onDone={() => setShowTour(false)} />}
     {deleteAccountOpen && <DeleteAccountDialog onDeleted={onLogout} onClose={() => setDeleteAccountOpen(false)} />}
     {protectDialogOpen && <ProtectNoteDialog noteTitle={draft.title} onSubmit={protectCurrentNote} onClose={() => setProtectDialogOpen(false)} />}
   </div>;

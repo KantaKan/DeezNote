@@ -14,6 +14,8 @@ export function App() {
   const [authenticated, setAuthenticated] = useState(Boolean(localStorage.getItem("save-text-token")));
   const [envelope, setEnvelope] = useState<EncryptedVault | null | undefined>(undefined);
   const [vaultKey, setVaultKey] = useState<Uint8Array | null>(null);
+  // True only right after this browser created the vault: the workspace seeds a welcome note once.
+  const [firstRun, setFirstRun] = useState(false);
   const pathname = usePathname();
 
   const legalPage = pathname === "/privacy" ? "privacy" : pathname === "/terms" ? "terms" : null;
@@ -103,6 +105,19 @@ export function App() {
     return <Landing />;
   }
   if (envelope === undefined) return <main className="grid min-h-screen place-items-center bg-neutral-50"><div className="grid justify-items-center gap-3"><span className="size-6 animate-spin rounded-full border-2 border-neutral-200 border-t-amber-500" /><p className="text-sm text-neutral-500">Opening DeezNote…</p></div></main>;
-  if (!vaultKey) return <VaultScreen envelope={envelope} onUnlocked={setVaultKey} onLogout={() => void logout()} />;
-  return <NotesWorkspace vaultKey={vaultKey} onLock={() => void lock()} onLogout={() => void logout()} />;
+  if (!vaultKey) {
+    return <VaultScreen
+      envelope={envelope}
+      onUnlocked={(key, created) => {
+        // Remember a just-created vault, so a later auto-lock shows "Unlock" instead of "Create" again.
+        if (created) {
+          setEnvelope(created);
+          setFirstRun(true);
+        }
+        setVaultKey(key);
+      }}
+      onLogout={() => void logout()}
+    />;
+  }
+  return <NotesWorkspace vaultKey={vaultKey} firstRun={firstRun} onLock={() => void lock()} onLogout={() => void logout()} />;
 }

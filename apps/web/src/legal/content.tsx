@@ -62,7 +62,7 @@ export function PrivacyEn() {
       </List>
     </Section>
     <Section title="On your device">
-      <p>Your browser keeps an encrypted copy of your notes (IndexedDB) so the app works offline, and stores your session token, your email and your theme choice (local storage). Signing out clears the token and the local notes. We don't use cookies.</p>
+      <p>Your browser keeps an encrypted copy of your notes (IndexedDB) so the app works offline, and stores your session token, your email and a few display preferences (theme, page language and whether you've seen the welcome tour) in local storage. Signing out clears the token and the local notes. We don't use cookies.</p>
     </Section>
     <Section title="What we don't do">
       <List>
@@ -126,7 +126,7 @@ export function PrivacyTh() {
       </List>
     </Section>
     <Section title="ข้อมูลบนอุปกรณ์ของคุณ">
-      <p>เบราว์เซอร์ของคุณเก็บสำเนาโน้ตที่เข้ารหัสไว้ (IndexedDB) เพื่อให้แอปใช้งานแบบออฟไลน์ได้ และเก็บโทเคนเซสชัน อีเมล และธีมที่คุณเลือกไว้ใน local storage เมื่อออกจากระบบ โทเคนและโน้ตในเครื่องจะถูกลบ เราไม่ใช้คุกกี้</p>
+      <p>เบราว์เซอร์ของคุณเก็บสำเนาโน้ตที่เข้ารหัสไว้ (IndexedDB) เพื่อให้แอปใช้งานแบบออฟไลน์ได้ และเก็บโทเคนเซสชัน อีเมล และค่าการแสดงผลบางอย่าง (ธีม ภาษาของหน้า และสถานะว่าคุณดูทัวร์แนะนำแล้วหรือยัง) ไว้ใน local storage เมื่อออกจากระบบ โทเคนและโน้ตในเครื่องจะถูกลบ เราไม่ใช้คุกกี้</p>
     </Section>
     <Section title="สิ่งที่เราไม่ทำ">
       <List>
