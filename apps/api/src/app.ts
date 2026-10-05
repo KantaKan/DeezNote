@@ -1,6 +1,7 @@
 import { cors } from "@elysiajs/cors";
 import { Elysia } from "elysia";
 import { config } from "./config";
+import { accountRoutes } from "./routes/account";
 import { createAuthRoutes } from "./routes/auth";
 import { healthRoutes } from "./routes/health";
 import { noteRoutes } from "./routes/notes";
@@ -44,6 +45,7 @@ export function createApp(security = new Security()) {
   })
   .use(healthRoutes)
   .use(createAuthRoutes(security))
+  .use(accountRoutes)
   .use(vaultRoutes)
   .use(noteRoutes);
 }

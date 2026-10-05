@@ -3,9 +3,17 @@ import type { EncryptedNote, EncryptedVault, NotePayload } from "@save-text/shar
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) {
+  constructor(message: string, readonly status: number, readonly code?: string) {
     super(message);
   }
+}
+
+export type Plan = "free" | "pro";
+
+export interface Account {
+  email: string;
+  plan: Plan;
+  usage: { usedBytes: number; totalBytes: number; noteBytes: number };
 }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -19,7 +27,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     },
   });
   const body = await response.json();
-  if (!response.ok) throw new ApiError(body.error ?? "Request failed", response.status);
+  if (!response.ok) throw new ApiError(body.error ?? "Request failed", response.status, body.code);
   return body as T;
 }
 
@@ -38,6 +46,7 @@ export const api = {
     method: "POST",
     body: JSON.stringify({ password }),
   }),
+  getAccount: () => request<Account>("/account"),
   getVault: () => request<{ vault: EncryptedVault | null }>("/vault"),
   createVault: (vault: EncryptedVault) => request<{ ok: true }>("/vault", {
     method: "POST",

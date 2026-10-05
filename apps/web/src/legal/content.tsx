@@ -53,7 +53,7 @@ export function PrivacyEn() {
     </Section>
     <Section title="What we store">
       <List>
-        <li><strong>Your account:</strong> your email address, and your account password stored only as an Argon2id hash.</li>
+        <li><strong>Your account:</strong> your email address, your account password stored only as an Argon2id hash, and your plan (Free or Pro). Your storage use is worked out from the encrypted size of your notes.</li>
         <li><strong>Your encrypted vault:</strong> your vault key, encrypted in your browser with your passphrase, plus the salt and nonce needed to unlock it there.</li>
         <li><strong>Your encrypted notes:</strong> the ciphertext described above, plus a random note ID, a version number and the time each note was last saved.</li>
         <li><strong>Sign-in sessions:</strong> a hash of each session token and when it expires (30 days after signing in).</li>
@@ -117,7 +117,7 @@ export function PrivacyTh() {
     </Section>
     <Section title="ข้อมูลที่เราเก็บ">
       <List>
-        <li><strong>บัญชีของคุณ:</strong> อีเมล และรหัสผ่านบัญชีซึ่งเก็บเฉพาะในรูปแบบแฮช Argon2id</li>
+        <li><strong>บัญชีของคุณ:</strong> อีเมล รหัสผ่านบัญชีซึ่งเก็บเฉพาะในรูปแบบแฮช Argon2id และแพ็กเกจของคุณ (Free หรือ Pro) ส่วนพื้นที่ที่ใช้ไปคำนวณจากขนาดของโน้ตที่เข้ารหัสแล้ว</li>
         <li><strong>คลังที่เข้ารหัส:</strong> กุญแจคลังที่ถูกเข้ารหัสในเบราว์เซอร์ด้วยรหัสผ่านคลังของคุณ พร้อมค่า salt และ nonce ที่ใช้ปลดล็อกในเบราว์เซอร์</li>
         <li><strong>โน้ตที่เข้ารหัส:</strong> ข้อมูลเข้ารหัสตามที่อธิบายข้างต้น พร้อมรหัสโน้ตแบบสุ่ม หมายเลขเวอร์ชัน และเวลาที่บันทึกล่าสุด</li>
         <li><strong>เซสชันการเข้าสู่ระบบ:</strong> ค่าแฮชของโทเคนเซสชัน และเวลาหมดอายุ (30 วันหลังเข้าสู่ระบบ)</li>
@@ -179,6 +179,14 @@ export function TermsEn() {
     <Section title="The service">
       <p>DeezNote is a free, open-source personal project, provided as is. We try to keep it running, but we don't guarantee that it will always be available, and we may change or close it. If we plan to close it, we'll give notice on the site where we reasonably can, so you can copy your notes.</p>
     </Section>
+    <Section title="Plans and storage limits">
+      <p>Every account starts on Free. Limits are measured on the encrypted size of your notes, because that is all our server can see.</p>
+      <List>
+        <li><strong>Free:</strong> up to 256 KB per note and 25 MB in total.</li>
+        <li><strong>Pro:</strong> up to 8 MB per note and 1 GB in total. Pro is not on sale yet; its price and payment terms will be added here before it is.</li>
+      </List>
+      <p>A change that goes over your limit stays saved on your device and syncs once the note fits. We may change the limits; if a change would affect notes you already have, we'll give notice first.</p>
+    </Section>
     <Section title="Your account and passphrase">
       <List>
         <li>Keep your account password and your vault passphrase safe. You are responsible for what happens under your account.</li>
@@ -217,6 +225,14 @@ export function TermsTh() {
     </Section>
     <Section title="ตัวบริการ">
       <p>DeezNote เป็นโปรเจกต์ส่วนตัวแบบโอเพนซอร์สที่ให้บริการฟรีตามสภาพที่เป็นอยู่ เราพยายามดูแลให้ระบบทำงานได้ แต่ไม่รับประกันว่าจะใช้งานได้ตลอดเวลา และอาจเปลี่ยนแปลงหรือปิดบริการได้ หากเราวางแผนจะปิดบริการ เราจะแจ้งบนเว็บไซต์ล่วงหน้าเท่าที่ทำได้อย่างสมเหตุสมผล เพื่อให้คุณคัดลอกโน้ตไว้</p>
+    </Section>
+    <Section title="แพ็กเกจและขีดจำกัดพื้นที่">
+      <p>ทุกบัญชีเริ่มต้นที่แพ็กเกจ Free ขีดจำกัดวัดจากขนาดของโน้ตหลังเข้ารหัส เพราะเซิร์ฟเวอร์ของเราเห็นได้เพียงเท่านั้น</p>
+      <List>
+        <li><strong>Free:</strong> โน้ตละไม่เกิน 256 KB และรวมทั้งหมดไม่เกิน 25 MB</li>
+        <li><strong>Pro:</strong> โน้ตละไม่เกิน 8 MB และรวมทั้งหมดไม่เกิน 1 GB ขณะนี้ยังไม่เปิดขาย Pro เราจะเพิ่มราคาและเงื่อนไขการชำระเงินในหน้านี้ก่อนเปิดขาย</li>
+      </List>
+      <p>การแก้ไขที่เกินขีดจำกัดจะยังถูกบันทึกไว้บนอุปกรณ์ของคุณ และจะซิงก์เมื่อขนาดโน้ตอยู่ในขีดจำกัด เราอาจปรับขีดจำกัดได้ หากการปรับนั้นกระทบโน้ตที่คุณมีอยู่แล้ว เราจะแจ้งให้ทราบล่วงหน้า</p>
     </Section>
     <Section title="บัญชีและรหัสผ่านคลังของคุณ">
       <List>

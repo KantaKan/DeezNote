@@ -48,16 +48,26 @@ const imageTitleFix = $remark("imageTitleFix", () => () => (tree: MdastNode) => 
 interface Props {
   initialValue: string;
   onChange: (markdown: string) => void;
+  /** Called with the processed photo's size before it's inserted; return false to cancel the insert. */
+  canInsertImage?: (dataUrlBytes: number) => boolean;
 }
 
-export function MarkdownEditor({ initialValue, onChange }: Props) {
+export function MarkdownEditor({ initialValue, onChange, canInsertImage }: Props) {
   const rootRef = useRef<HTMLDivElement>(null);
   const initialValueRef = useRef(initialValue);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const canInsertImageRef = useRef(canInsertImage);
+  canInsertImageRef.current = canInsertImage;
 
   useEffect(() => {
     if (!rootRef.current) return;
+
+    // Crepe treats an empty URL as "cancelled", so a photo that doesn't fit is simply not inserted.
+    const uploadImage = async (file: File) => {
+      const dataUrl = await prepareImage(file);
+      return canInsertImageRef.current && !canInsertImageRef.current(dataUrl.length) ? "" : dataUrl;
+    };
 
     const crepe = new Crepe({
       root: rootRef.current,
@@ -69,9 +79,9 @@ export function MarkdownEditor({ initialValue, onChange }: Props) {
       },
       featureConfigs: {
         [Crepe.Feature.ImageBlock]: {
-          onUpload: prepareImage,
-          inlineOnUpload: prepareImage,
-          blockOnUpload: prepareImage,
+          onUpload: uploadImage,
+          inlineOnUpload: uploadImage,
+          blockOnUpload: uploadImage,
           maxWidth: MAX_IMAGE_EDGE,
           maxHeight: MAX_IMAGE_EDGE,
         },

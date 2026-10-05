@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import { eq } from "drizzle-orm";
-import { app } from "./app";
+import { app, createApp } from "./app";
+import { Security } from "./services/security";
 import { db } from "./db";
 import { notes, users } from "./db/schema";
+import { config } from "./config";
 
 function request(path: string, init?: RequestInit) {
   return app.handle(new Request(`http://localhost${path}`, init));
@@ -118,5 +120,44 @@ describe("DeezNote API", () => {
     expect((await request("/notes", { headers: { Authorization: `Bearer ${token}` } })).status).toBe(401);
     expect((await post("/auth/login", credentials)).status).toBe(401);
     expect(await db.select().from(notes).where(eq(notes.id, id))).toHaveLength(0);
+  });
+
+  test("enforces plan storage limits on the encrypted size, and reports usage", async () => {
+    // Its own app, so earlier tests' sign-ups don't count against the per-client registration limit.
+    const limitsApp = createApp(new Security({ ...config.security, trustedProxyIps: [] }));
+    const request = (path: string, init?: RequestInit) => limitsApp.handle(new Request(`http://localhost${path}`, init));
+    const register = await request("/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "limits@example.com", password: "a strong password" }),
+    });
+    const { token, user } = await register.json() as { token: string; user: { id: string } };
+    const auth = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    const put = (id: string, size: number) => request(`/notes/${id}`, {
+      method: "PUT",
+      headers: auth,
+      body: JSON.stringify({ id, encryptedContent: "x".repeat(size), encryptedNoteKey: "k", contentNonce: "n", keyNonce: "kn", baseVersion: 0 }),
+    });
+
+    const free = config.plans.free;
+    const tooBig = await put(crypto.randomUUID(), free.noteBytes + 1);
+    expect(tooBig.status).toBe(413);
+    expect(await tooBig.json()).toMatchObject({ code: "NOTE_TOO_LARGE", plan: "free", limitBytes: free.noteBytes });
+    expect((await put(crypto.randomUUID(), 1000)).status).toBe(200);
+
+    const account = await (await request("/account", { headers: auth })).json();
+    expect(account).toMatchObject({ plan: "free", usage: { usedBytes: 1000, totalBytes: free.totalBytes, noteBytes: free.noteBytes } });
+
+    // Fill the account to just under its total, then one more small note no longer fits.
+    await db.insert(notes).values({ id: crypto.randomUUID(), userId: user.id, encryptedContent: "x".repeat(free.totalBytes - 1500), encryptedNoteKey: "k", contentNonce: "n", keyNonce: "kn" });
+    const full = await put(crypto.randomUUID(), 1000);
+    expect(full.status).toBe(413);
+    expect((await full.json()).code).toBe("STORAGE_FULL");
+
+    // Pro raises both limits.
+    await db.update(users).set({ plan: "pro" }).where(eq(users.id, user.id));
+    expect((await put(crypto.randomUUID(), free.noteBytes + 1)).status).toBe(200);
+    expect((await (await request("/account", { headers: auth })).json()).plan).toBe("pro");
+    expect((await request("/account")).status).toBe(401);
   });
 });

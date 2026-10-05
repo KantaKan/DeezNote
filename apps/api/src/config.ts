@@ -16,6 +16,17 @@ export const config = {
   // Resolves to apps/api/drizzle both from src/ (dev) and from dist/ (built bundle).
   migrationsDir: process.env.MIGRATIONS_DIR ?? resolve(import.meta.dir, "../drizzle"),
   sessionDays: 30,
+  // Storage limits per plan, measured on the encrypted size the server actually stores (it can't see inside notes).
+  plans: {
+    free: {
+      noteBytes: positiveInteger("FREE_NOTE_BYTES", 256 * 1024),
+      totalBytes: positiveInteger("FREE_TOTAL_BYTES", 25 * 1024 * 1024),
+    },
+    pro: {
+      noteBytes: positiveInteger("PRO_NOTE_BYTES", 8 * 1024 * 1024),
+      totalBytes: positiveInteger("PRO_TOTAL_BYTES", 1024 * 1024 * 1024),
+    },
+  },
   security: {
     maxBodyBytes: positiveInteger("API_MAX_BODY_BYTES", 8 * 1024 * 1024),
     maxAuthBodyBytes: positiveInteger("API_MAX_AUTH_BODY_BYTES", 4096),

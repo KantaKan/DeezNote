@@ -8,6 +8,8 @@ export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  // "free" or "pro"; decides the storage limits in config.plans.
+  plan: text("plan", { enum: ["free", "pro"] }).notNull().default("free"),
   createdAt: timestamp("created_at").notNull().$defaultFn(now),
 });
 

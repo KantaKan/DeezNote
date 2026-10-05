@@ -3,6 +3,7 @@ import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { notes } from "../db/schema";
 import { getAuthenticatedUserId } from "../services/session";
+import { storageProblem } from "../services/storage";
 
 const encryptedNote = t.Object({
   id: t.String({ format: "uuid" }),
@@ -59,6 +60,13 @@ export const noteRoutes = new Elysia({ name: "routes.notes", prefix: "/notes" })
     if (params.id !== body.id) {
       set.status = 400;
       return { error: "Note ID mismatch" };
+    }
+
+    const problem = await storageProblem(userId, body.id, body.encryptedContent.length);
+    if (problem) {
+      const { status, ...details } = problem;
+      set.status = status;
+      return details;
     }
 
     const [existing] = await db.select().from(notes)

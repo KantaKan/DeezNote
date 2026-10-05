@@ -3,7 +3,7 @@ import type { NoteDocument } from "@save-text/shared";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api, ApiError } from "../lib/api";
+import { api, ApiError, type Account } from "../lib/api";
 import { decryptNote, deriveNoteProtection, destroyKey, encryptNote, LockedNoteError, type NoteProtection } from "../lib/crypto";
 import { localDb, type LocalNote } from "../lib/db";
 import { noteColorClass } from "../lib/noteColors";
@@ -12,6 +12,7 @@ import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
 import { NoteColorPicker } from "./NoteColorPicker";
+import { PlanDialog, UsageMeter, type PlanReason } from "./PlanDialog";
 import { EmptyState, welcomeNote } from "./Onboarding";
 import { Tour, tourDone, type TourStep } from "./Tour";
 import { ProtectNoteDialog, UnlockNoteCard } from "./NoteLock";
@@ -39,6 +40,11 @@ const MarkdownEditor = lazy(async () => {
 });
 
 const AUTOSAVE_DELAY = 900;
+
+/** Preview text for a note: photos become "Photo", empty image placeholders disappear. */
+function noteExcerpt(markdown: string) {
+  return markdown.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "Photo").replace(/!\[[^\]]*\]\(\s*\)/g, "").replace(/\s+/g, " ").trim();
+}
 
 const TOUR_STEPS: TourStep[] = [
   { target: "new-note", title: "Start a note", body: "Click here, or press the shortcut shown, any time. Notes save on their own as you type." },
@@ -97,6 +103,10 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
+  const [planDialog, setPlanDialog] = useState<{ reason?: PlanReason } | null>(null);
+  // Explain a size rejection once per note, not on every autosave retry.
+  const sizeWarned = useRef(new Set<string>());
   const welcomeSeeded = useRef(false);
   const [showTour, setShowTour] = useState(() => !tourDone());
   const theme = useTheme();
@@ -104,6 +114,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   const loadNotes = useCallback(async () => {
     try {
       const remote = await api.getNotes();
+      void api.getAccount().then(setAccount).catch(() => {});
       const pendingIds = new Set((await localDb.notes.where("syncStatus").anyOf("pending", "conflict").toArray()).map((n) => n.id));
       const remoteIds = new Set(remote.notes.map((note) => note.id));
       const removedOnServer = (await localDb.notes.where("syncStatus").equals("synced").toArray())
@@ -174,11 +185,21 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
       await localDb.notes.put(local);
       setOnline(true);
       setMessage("Encrypted and synced");
+      void api.getAccount().then(setAccount).catch(() => {});
     } catch (reason) {
       local.syncStatus = reason instanceof ApiError && reason.status === 409 ? "conflict" : "pending";
       await localDb.notes.put(local);
-      setOnline(false);
-      setMessage(local.syncStatus === "conflict" ? "Sync conflict—your local draft is safe" : "Saved locally—waiting to sync");
+      if (reason instanceof ApiError && reason.status === 413) {
+        // Over the plan's limit: the server is reachable, the note just can't sync yet. Keep the draft locally.
+        setMessage("Saved on this device. Too large to sync");
+        if (!sizeWarned.current.has(id)) {
+          sizeWarned.current.add(id);
+          setPlanDialog({ reason: reason.code === "STORAGE_FULL" ? "storage-full" : "note-too-large" });
+        }
+      } else {
+        setOnline(false);
+        setMessage(local.syncStatus === "conflict" ? "Sync conflict. Your local draft is safe" : "Saved locally. Waiting to sync");
+      }
     }
 
     const open: OpenNote = { encrypted: local, document, locked: false, protectionSalt: protection?.salt };
@@ -285,7 +306,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
       return null;
     } catch (reason) {
       console.error(reason);
-      setMessage("Could not delete—check your connection");
+      setMessage("Could not delete. Check your connection");
       return "Couldn't delete this note. Check your connection and try again.";
     } finally {
       setSaving(false);
@@ -398,7 +419,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
         <span className="truncate">{note.document.title || "Untitled"}</span>
         {note.document.favorite && <Star size={12} weight="fill" className="ml-auto shrink-0 text-amber-500" />}
       </strong>
-      <span className="truncate text-xs text-neutral-500">{note.locked ? "Locked with a note password" : note.document.markdown.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "Photo").replace(/[#*_>`]/g, "").slice(0, 82) || "Empty note"}</span>
+      <span className="truncate text-xs text-neutral-500">{note.locked ? "Locked with a note password" : noteExcerpt(note.document.markdown).replace(/[#*_>`]/g, "").slice(0, 82) || "Empty note"}</span>
       {note.document.tags.length > 0 && <span className="flex gap-1 overflow-hidden pt-0.5">{note.document.tags.slice(0, 3).map((tag) => <span key={tag} className={`truncate rounded px-1.5 py-0.5 text-[0.5625rem] font-medium ${tagColor(tag)}`}>#{tag}</span>)}</span>}
       <small className="mt-1 flex items-center justify-between text-[0.625rem] text-neutral-400"><time>{new Date(note.encrypted.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time><span className={note.encrypted.syncStatus === "conflict" ? "text-red-500" : ""}>{note.encrypted.syncStatus === "synced" ? "Saved" : note.encrypted.syncStatus}</span></small>
     </button>;
@@ -410,7 +431,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   return <div className="flex h-screen overflow-hidden bg-white text-neutral-950">
     {sidebarOpen && <button className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px] md:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />}
     <aside className={`fixed inset-y-0 left-0 z-30 shrink-0 overflow-hidden border-r border-neutral-200 bg-neutral-50 transition-[transform,width] duration-200 md:relative ${sidebarOpen ? "w-[310px] translate-x-0" : "w-[310px] -translate-x-full md:w-0"}`}>
-      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_1fr_auto]">
+      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_1fr_auto_auto]">
         <header className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2.5"><Logo /><strong className="text-[0.9375rem] tracking-[-.01em]">DeezNote</strong></div>
           <Button className="md:hidden" variant="ghost" size="icon-sm" title="Close sidebar" onClick={() => setSidebarOpen(false)}><X size={17} /></Button>
@@ -438,6 +459,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
           {!visibleNotes.length && <div className="px-5 py-14 text-center"><NotePencil className="mx-auto mb-3 text-neutral-300" size={30} weight="duotone" /><p className="text-sm font-medium text-neutral-600">{query ? "No matching notes" : "No notes yet"}</p><span className="mt-1 block text-xs leading-5 text-neutral-400">{query ? "Try another search." : "Create a note to start writing."}</span></div>}
         </div>
 
+        {account ? <UsageMeter account={account} onOpen={() => setPlanDialog({})} /> : <div />}
         <footer className="flex h-14 items-center justify-between border-t border-neutral-200 px-3">
           <span className={`flex items-center gap-1.5 text-[0.6875rem] font-medium ${online ? "text-emerald-600" : "text-orange-600"}`}>{online ? <CloudCheck size={15} weight="duotone" /> : <WifiSlash size={15} weight="duotone" />}{online ? "Synced" : "Offline"}</span>
           <div className="flex"><Button data-tour="theme" variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button className="hover:bg-red-50 hover:text-red-600" variant="ghost" size="icon-sm" title="Delete account" onClick={() => setDeleteAccountOpen(true)}><UserMinus size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
@@ -512,7 +534,19 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
             ? <article className="markdown-preview pb-28 pt-10" dangerouslySetInnerHTML={{ __html: rendered }} />
             : <div className="mt-8">
               <Suspense fallback={<div className="py-8 text-sm text-neutral-400">Loading editor…</div>}>
-                <MarkdownEditor key={selectedId ?? "new-note"} initialValue={draft.markdown} onChange={(markdown) => changeDraft({ ...draft, markdown })} />
+                <MarkdownEditor
+                  key={selectedId ?? "new-note"}
+                  initialValue={draft.markdown}
+                  onChange={(markdown) => changeDraft({ ...draft, markdown })}
+                  canInsertImage={(dataUrlBytes) => {
+                    if (!account) return true; // Offline or unknown plan: the server still enforces the limit.
+                    // Encryption stores the note as base64, about 4/3 of the plain JSON size.
+                    const estimate = Math.ceil((JSON.stringify(draft).length + dataUrlBytes) * 4 / 3) + 512;
+                    if (estimate <= account.usage.noteBytes) return true;
+                    setPlanDialog({ reason: "image-too-large" });
+                    return false;
+                  }}
+                />
               </Suspense>
             </div>}
         </>}
@@ -520,7 +554,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
     </main>
     {deleteDialogOpen && <DeleteNoteDialog
       title={draft.title}
-      excerpt={draft.markdown.replace(/!\[[^\]]*\]\(data:[^)]+\)/g, "Photo").replace(/[#*_>`]/g, "").trim().slice(0, 120)}
+      excerpt={noteExcerpt(draft.markdown).replace(/[#*_>`]/g, "").trim().slice(0, 120)}
       updatedAt={currentNote?.encrypted.updatedAt}
       locked={Boolean(currentNote?.locked)}
       onConfirm={deleteCurrentNote}
@@ -528,6 +562,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
     />}
     {/* Wait for the first load (and the welcome note) so the tour points at a populated workspace. */}
     {showTour && loaded && (!firstRun || notes.length > 0) && <Tour steps={TOUR_STEPS} onDone={() => setShowTour(false)} />}
+    {planDialog && account && <PlanDialog account={account} reason={planDialog.reason} onClose={() => setPlanDialog(null)} />}
     {deleteAccountOpen && <DeleteAccountDialog onDeleted={onLogout} onClose={() => setDeleteAccountOpen(false)} />}
     {protectDialogOpen && <ProtectNoteDialog noteTitle={draft.title} onSubmit={protectCurrentNote} onClose={() => setProtectDialogOpen(false)} />}
   </div>;
