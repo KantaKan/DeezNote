@@ -193,7 +193,8 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
     return () => window.clearTimeout(timer);
   }, [dirty, draft, selectedId, queueSave]);
 
-  function changeDraft(document: NoteDocument) {
+  // Accepts an updater so quick successive edits (tag, then star, then colour) build on the latest draft.
+  function changeDraft(document: NoteDocument | ((current: NoteDocument) => NoteDocument)) {
     setDraft(document);
     setDirty(true);
     setMessage("Unsaved changes");
@@ -327,7 +328,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
 
   // Favourite/colour also update the sidebar right away instead of waiting for the autosave round-trip.
   function updateNoteMeta(patch: Pick<NoteDocument, "favorite" | "color">) {
-    changeDraft({ ...draft, ...patch });
+    changeDraft((current) => ({ ...current, ...patch }));
     setNotes((existing) => existing.map((note) => note.encrypted.id === selectedId ? { ...note, document: { ...note.document, ...patch } } : note));
   }
 
@@ -335,11 +336,11 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
     const tag = value.trim().replace(/^#/, "").slice(0, 24);
     setTagInput("");
     if (!tag || draft.tags.length >= 8 || draft.tags.some((existing) => existing.toLowerCase() === tag.toLowerCase())) return;
-    changeDraft({ ...draft, tags: [...draft.tags, tag] });
+    changeDraft((current) => ({ ...current, tags: [...current.tags, tag] }));
   }
 
   function removeTag(tag: string) {
-    changeDraft({ ...draft, tags: draft.tags.filter((existing) => existing !== tag) });
+    changeDraft((current) => ({ ...current, tags: current.tags.filter((existing) => existing !== tag) }));
   }
 
   const rendered = useMemo(
