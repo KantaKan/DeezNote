@@ -1,12 +1,11 @@
 import { ArrowDown, ArrowRight, Code, Key, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
 import { useEffect, useRef, type ReactNode } from "react";
+import { REPO_URL } from "../legal/policy";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
 
 // Public front door. Light and dark come from the same palette tokens as the app (styles.css),
 // so every class here works in both themes. Shape system: buttons rounded-lg, panels and images rounded-2xl.
-
-const REPO_URL = "https://github.com/KantaKan/DeezNote";
 
 // Real output of encryptNote() for the "Skye, late September" note shown on the left (values truncated).
 const STORED_ROW = [
@@ -193,6 +192,8 @@ export function Landing() {
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
         <span className="flex items-center gap-2.5 font-medium text-neutral-700"><Logo className="size-6" /> DeezNote</span>
         <div className="flex items-center gap-5">
+          <a {...linkProps("/privacy")} className="transition hover:text-neutral-900">Privacy</a>
+          <a {...linkProps("/terms")} className="transition hover:text-neutral-900">Terms</a>
           <a href={REPO_URL} target="_blank" rel="noreferrer" className="transition hover:text-neutral-900">Read the code</a>
           <a {...linkProps("/login")} className="transition hover:text-neutral-900">Sign in</a>
         </div>

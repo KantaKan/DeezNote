@@ -12,7 +12,8 @@
     "test:watch": "npx --yes bun@1.4.2 test --watch",
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
-    "db:generate": "bun run --cwd apps/api db:generate"
+    "db:generate": "bun run --cwd apps/api db:generate",
+    "policy:fingerprint": "bun apps/web/src/legal/fingerprint.ts"
   },
   "devDependencies": {
     "concurrently": "10.0.5"

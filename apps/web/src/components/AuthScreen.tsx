@@ -49,6 +49,7 @@ export function AuthScreen({ mode, onAuthenticated }: { mode: "login" | "registe
           <label className="grid gap-2 text-sm font-medium text-neutral-700">Password<Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} required minLength={10} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="At least 10 characters" /></label>
           {error && <p className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">{error}</p>}
           <Button className="mt-1 h-11" disabled={busy}>{busy ? "Please wait…" : mode === "login" ? "Sign in" : "Create account"}</Button>
+          {mode === "register" && <p className="text-xs leading-5 text-neutral-500">By creating an account you agree to the <a {...linkProps("/terms")} className="font-medium text-neutral-700 underline underline-offset-2 hover:text-neutral-950">Terms</a> and <a {...linkProps("/privacy")} className="font-medium text-neutral-700 underline underline-offset-2 hover:text-neutral-950">Privacy Policy</a>.</p>}
         </form>
         <button className="mt-6 w-full text-center text-sm text-neutral-500 hover:text-neutral-950" onClick={() => { setError(""); navigate(mode === "login" ? "/signup" : "/login", { replace: true }); }}>
           {mode === "login" ? "New here? Create an account" : "Already have an account? Sign in"}

@@ -95,4 +95,28 @@ describe("DeezNote API", () => {
     // Deleting the account cascades to its sessions, so the old token no longer works.
     expect((await request("/vault", { headers: auth })).status).toBe(401);
   });
+
+  test("lets a signed-in user delete their account and everything in it", async () => {
+    const post = (path: string, body: unknown, token?: string) => request(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(token && { Authorization: `Bearer ${token}` }) },
+      body: JSON.stringify(body),
+    });
+    const credentials = { email: "erase-me@example.com", password: "a strong password" };
+    const { token } = await (await post("/auth/register", credentials)).json() as { token: string };
+    const id = crypto.randomUUID();
+    await request(`/notes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id, encryptedContent: "c", encryptedNoteKey: "k", contentNonce: "n", keyNonce: "kn", baseVersion: 0 }),
+    });
+
+    expect((await post("/auth/delete-account", { password: "a strong password" })).status).toBe(401);
+    expect((await post("/auth/delete-account", { password: "the wrong password" }, token)).status).toBe(403);
+    expect((await post("/auth/delete-account", { password: "a strong password" }, token)).status).toBe(200);
+
+    expect((await request("/notes", { headers: { Authorization: `Bearer ${token}` } })).status).toBe(401);
+    expect((await post("/auth/login", credentials)).status).toBe(401);
+    expect(await db.select().from(notes).where(eq(notes.id, id))).toHaveLength(0);
+  });
 });

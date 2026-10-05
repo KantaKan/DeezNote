@@ -34,6 +34,10 @@ export const api = {
     return result;
   },
   logout: () => request<{ ok: true }>("/auth/logout", { method: "POST" }),
+  deleteAccount: (password: string) => request<{ ok: true }>("/auth/delete-account", {
+    method: "POST",
+    body: JSON.stringify({ password }),
+  }),
   getVault: () => request<{ vault: EncryptedVault | null }>("/vault"),
   createVault: (vault: EncryptedVault) => request<{ ok: true }>("/vault", {
     method: "POST",

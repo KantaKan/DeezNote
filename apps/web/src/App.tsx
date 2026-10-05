@@ -2,6 +2,7 @@ import type { EncryptedVault } from "@save-text/shared";
 import { useCallback, useEffect, useState } from "react";
 import { AuthScreen } from "./components/AuthScreen";
 import { Landing } from "./components/Landing";
+import { LegalPage } from "./components/LegalPage";
 import { NotesWorkspace } from "./components/NotesWorkspace";
 import { VaultScreen } from "./components/VaultScreen";
 import { api } from "./lib/api";
@@ -15,10 +16,12 @@ export function App() {
   const [vaultKey, setVaultKey] = useState<Uint8Array | null>(null);
   const pathname = usePathname();
 
-  // Signed-in users never see the public pages; the app lives at "/".
+  const legalPage = pathname === "/privacy" ? "privacy" : pathname === "/terms" ? "terms" : null;
+
+  // Signed-in users skip the landing and sign-in pages (the app lives at "/"); legal pages stay open to everyone.
   useEffect(() => {
-    if (authenticated && pathname !== "/") navigate("/", { replace: true });
-  }, [authenticated, pathname]);
+    if (authenticated && pathname !== "/" && !legalPage) navigate("/", { replace: true });
+  }, [authenticated, pathname, legalPage]);
 
   const fetchVault = useCallback(async () => {
     try {
@@ -92,6 +95,7 @@ export function App() {
     setAuthenticated(false);
   }
 
+  if (legalPage) return <LegalPage kind={legalPage} signedIn={authenticated} />;
   if (!authenticated) {
     if (pathname === "/login" || pathname === "/signup") {
       return <AuthScreen mode={pathname === "/signup" ? "register" : "login"} onAuthenticated={() => setAuthenticated(true)} />;

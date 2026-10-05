@@ -114,7 +114,7 @@ export class Security {
     const ip = this.clientIp(request, peer);
     this.limiter.check(`request:${ip}`, this.options.requestsPerMinute, 60_000);
     const path = new URL(request.url).pathname.replace(/\/$/, "");
-    if (request.method === "POST" && (path === "/auth/login" || path === "/auth/register")) {
+    if (request.method === "POST" && (path === "/auth/login" || path === "/auth/register" || path === "/auth/delete-account")) {
       this.limiter.check(`auth:${ip}`, this.options.authPerMinute, 60_000);
       if (path === "/auth/register") this.limiter.check(`register:${ip}`, this.options.registrationsPerHour, 3_600_000);
     }

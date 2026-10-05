@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { Elysia, t } from "elysia";
 import { db } from "../db";
 import { users } from "../db/schema";
-import { createSession, revokeSession } from "../services/session";
+import { createSession, getAuthenticatedUserId, revokeSession } from "../services/session";
 import type { Security } from "../services/security";
 
 const credentials = t.Object({
@@ -45,6 +45,27 @@ export function createAuthRoutes(security: Security) {
     }
     return { user: { id: user.id, email }, ...(await createSession(user.id)) };
   }, { body: credentials })
+  // PDPA right to erasure, self-service: needs the session and the account password. Deleting the user
+  // cascades to its vault, notes and sessions (foreign keys are enforced in db/index.ts).
+  .post("/delete-account", async ({ body, headers, set }) => {
+    const userId = await getAuthenticatedUserId(headers.authorization);
+    if (!userId) {
+      set.status = 401;
+      return { error: "Unauthorized" };
+    }
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (!user) {
+      set.status = 401;
+      return { error: "Unauthorized" };
+    }
+    security.checkLogin(user.email);
+    if (!(await security.withPasswordHash(() => Bun.password.verify(body.password, user.passwordHash)))) {
+      set.status = 403;
+      return { error: "Wrong password" };
+    }
+    await db.delete(users).where(eq(users.id, userId));
+    return { ok: true };
+  }, { body: t.Object({ password: t.String({ minLength: 1, maxLength: 200 }) }) })
   .post("/logout", async ({ headers, set }) => {
     if (!(await revokeSession(headers.authorization))) {
       set.status = 401;

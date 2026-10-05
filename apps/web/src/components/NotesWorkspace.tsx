@@ -1,4 +1,4 @@
-import { CloudCheck, Desktop, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, Moon, NotePencil, Password, Plus, ShareNetwork, SignOut, SidebarSimple, Star, Sun, Tag, Trash, WifiSlash, X } from "@phosphor-icons/react";
+import { CloudCheck, Desktop, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, Moon, NotePencil, Password, Plus, ShareNetwork, SignOut, SidebarSimple, Star, Sun, Tag, Trash, UserMinus, WifiSlash, X } from "@phosphor-icons/react";
 import type { NoteDocument } from "@save-text/shared";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -8,6 +8,7 @@ import { decryptNote, deriveNoteProtection, destroyKey, encryptNote, LockedNoteE
 import { localDb, type LocalNote } from "../lib/db";
 import { noteColorClass } from "../lib/noteColors";
 import { useTheme } from "../lib/theme";
+import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
 import { NoteColorPicker } from "./NoteColorPicker";
@@ -83,6 +84,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
   const unlockInputRef = useRef<HTMLInputElement>(null);
   const [protectDialogOpen, setProtectDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const theme = useTheme();
 
   const loadNotes = useCallback(async () => {
@@ -412,7 +414,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
 
         <footer className="flex h-14 items-center justify-between border-t border-neutral-200 px-3">
           <span className={`flex items-center gap-1.5 text-[0.6875rem] font-medium ${online ? "text-emerald-600" : "text-orange-600"}`}>{online ? <CloudCheck size={15} weight="duotone" /> : <WifiSlash size={15} weight="duotone" />}{online ? "Synced" : "Offline"}</span>
-          <div className="flex"><Button variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
+          <div className="flex"><Button variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button className="hover:bg-red-50 hover:text-red-600" variant="ghost" size="icon-sm" title="Delete account" onClick={() => setDeleteAccountOpen(true)}><UserMinus size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
         </footer>
       </div>
     </aside>
@@ -494,6 +496,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
       onConfirm={deleteCurrentNote}
       onClose={() => setDeleteDialogOpen(false)}
     />}
+    {deleteAccountOpen && <DeleteAccountDialog onDeleted={onLogout} onClose={() => setDeleteAccountOpen(false)} />}
     {protectDialogOpen && <ProtectNoteDialog noteTitle={draft.title} onSubmit={protectCurrentNote} onClose={() => setProtectDialogOpen(false)} />}
   </div>;
 }
