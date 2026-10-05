@@ -11,8 +11,13 @@
 #   deeznote-api.service    the Bun API, bound to Docker's bridge IP, memory-capped
 set -euo pipefail
 
-DOMAIN="${1:?usage: setup-server.sh <domain> \"<ssh public key>\"}"
-DEPLOY_PUBLIC_KEY="${2:?usage: setup-server.sh <domain> \"<ssh public key>\"}"
+DOMAIN="${1:?usage: setup-server.sh <domain> \"<ssh public key>\" [trusted-proxy-ips]}"
+DEPLOY_PUBLIC_KEY="${2:?usage: setup-server.sh <domain> \"<ssh public key>\" [trusted-proxy-ips]}"
+TRUSTED_PROXY_IPS="${3:-}"
+# Prevent newlines/systemd syntax in the generated Environment value. The app validates IPs.
+if [[ ! "$TRUSTED_PROXY_IPS" =~ ^[0-9a-fA-F:.,\ ]*$ ]]; then
+  echo "trusted-proxy-ips must be a comma-separated list of IP addresses" >&2; exit 1
+fi
 BUN_VERSION="1.4.2"
 APP_USER="deeznote"
 APP_DIR="/srv/deeznote"
@@ -75,6 +80,7 @@ Environment=API_HOST=$DOCKER_HOST_IP
 Environment=API_PORT=$API_PORT
 Environment=DATABASE_PATH=$DATA_DIR/deeznote.db
 Environment=WEB_ORIGIN=https://$DOMAIN
+Environment="API_TRUSTED_PROXY_IPS=$TRUSTED_PROXY_IPS"
 Restart=on-failure
 RestartSec=2
 # Keep the API from starving the other apps on a 1 GB droplet.
@@ -102,6 +108,8 @@ visudo -cf /etc/sudoers.d/deeznote >/dev/null
 cat <<EOF
 
 Done. Server is ready for the first deploy.
+Trusted proxy IPs: ${TRUSTED_PROXY_IPS:-none (set API_TRUSTED_PROXY_IPS before public launch)}
+Use the Caddy container's source IP, NOT the API bind address. See DEPLOY.md.
 
 Next, give Caddy (in /opt/exam) access to DeezNote — see DEPLOY.md step 3:
   - mount /srv/deeznote into the caddy service (read-only)
@@ -115,6 +123,13 @@ $DOMAIN {
 	}
 
 	handle {
+		header {
+			X-Content-Type-Options nosniff
+			Referrer-Policy no-referrer
+			X-Frame-Options DENY
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		}
 		root * $APP_DIR/current/web
 		try_files {path} /index.html
 		file_server

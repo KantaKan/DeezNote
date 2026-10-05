@@ -1,5 +1,11 @@
 import { resolve } from "node:path";
 
+function positiveInteger(name: string, fallback: number) {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isSafeInteger(value) || value < 1) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
 export const config = {
   port: Number(process.env.API_PORT ?? 3000),
   // In production, bind to Docker's bridge IP so only the Caddy container can reach the API.
@@ -10,4 +16,19 @@ export const config = {
   // Resolves to apps/api/drizzle both from src/ (dev) and from dist/ (built bundle).
   migrationsDir: process.env.MIGRATIONS_DIR ?? resolve(import.meta.dir, "../drizzle"),
   sessionDays: 30,
+  security: {
+    maxBodyBytes: positiveInteger("API_MAX_BODY_BYTES", 8 * 1024 * 1024),
+    maxAuthBodyBytes: positiveInteger("API_MAX_AUTH_BODY_BYTES", 4096),
+    maxHeaderBytes: positiveInteger("API_MAX_HEADER_BYTES", 16 * 1024),
+    maxHeaderValueBytes: positiveInteger("API_MAX_HEADER_VALUE_BYTES", 8192),
+    maxUrlBytes: 2048,
+    requestsPerMinute: positiveInteger("API_REQUESTS_PER_MINUTE", 120),
+    authPerMinute: positiveInteger("API_AUTH_PER_MINUTE", 10),
+    registrationsPerHour: positiveInteger("API_REGISTRATIONS_PER_HOUR", 5),
+    loginsPerAccountWindow: positiveInteger("API_LOGINS_PER_ACCOUNT_WINDOW", 20),
+    maxConcurrentHashes: positiveInteger("API_MAX_CONCURRENT_HASHES", 2),
+    maxRateLimitKeys: positiveInteger("API_MAX_RATE_LIMIT_KEYS", 10_000),
+    // Exact socket-peer allowlist, never a blanket trust of forwarded headers.
+    trustedProxyIps: (process.env.API_TRUSTED_PROXY_IPS ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
+  },
 } as const;

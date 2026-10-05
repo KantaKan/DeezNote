@@ -35,7 +35,9 @@ bash /root/setup-server.sh deeznote.103-253-146-20.sslip.io "PASTE THE .pub LINE
 ```
 
 It installs Bun, creates the `deeznote` user, `/srv/deeznote`, `/var/lib/deeznote` and the `deeznote-api` service, and
-prints the Caddy site block for step 3. Safe to re-run.
+prints the Caddy site block for step 3. Safe to re-run. The optional third argument is a comma-separated
+allowlist of Caddy's internal source IPs (see **Security configuration** below); re-running without it resets
+that generated service setting to trust no proxy.
 
 ### 3. Let your existing Caddy serve DeezNote
 
@@ -68,6 +70,13 @@ deeznote.103-253-146-20.sslip.io {
 	}
 
 	handle {
+		header {
+			X-Content-Type-Options nosniff
+			Referrer-Policy no-referrer
+			X-Frame-Options DENY
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		}
 		root * /srv/deeznote/current/web
 		try_files {path} /index.html
 		file_server
@@ -105,6 +114,69 @@ GitHub → the repo → **Settings → Secrets and variables → Actions → New
 
 Push to `main` (or **Actions → Build and deploy → Run workflow**). When it's green, open
 https://deeznote.103-253-146-20.sslip.io. The first visit can take a few seconds while Caddy gets the HTTPS certificate.
+
+## Security configuration
+
+The API now enforces these defaults (adjust environment variables only after considering server capacity):
+
+| Control | Default | Environment variable |
+|---|---|---|
+| All requests per client IP | 120/minute | `API_REQUESTS_PER_MINUTE` |
+| Login + registration attempts per client IP | 10/minute | `API_AUTH_PER_MINUTE` |
+| Registration attempts per client IP | 5/hour | `API_REGISTRATIONS_PER_HOUR` |
+| Login attempts per normalized email | 20/15 minutes | `API_LOGINS_PER_ACCOUNT_WINDOW` |
+| Simultaneous password hashes/verifications | 2 | `API_MAX_CONCURRENT_HASHES` |
+| Request body | 8 MiB | `API_MAX_BODY_BYTES` |
+| Auth and vault request body | 4 KiB (or the lower general cap) | `API_MAX_AUTH_BODY_BYTES` |
+| Aggregate request headers | 16 KiB | `API_MAX_HEADER_BYTES` |
+| Individual header value | 8 KiB | `API_MAX_HEADER_VALUE_BYTES` |
+| Active limiter keys | 10,000 | `API_MAX_RATE_LIMIT_KEYS` |
+
+Requests exceeding rates receive `429` and `Retry-After`; exhausted hashing capacity returns `503` and
+`Retry-After`. Limits count attempts, including successful logins. Windows expire without blocked requests
+extending them. Shared NAT addresses share an IP allowance. Rate state is bounded, in memory, per process,
+and resets on restart. At key capacity, new keys are temporarily rejected rather than evicting active limits.
+Use a shared limiter/edge protection before scaling to multiple API processes. This is not volumetric DDoS protection.
+
+Bodies are checked against declared length and actual streamed bytes before JSON parsing. Compressed request
+bodies and non-JSON bodies are not supported. URLs are capped at 2,048 bytes. Header checks happen after the HTTP
+server parses headers; transport-level header limits and slow-client protection remain Bun/Caddy's responsibility.
+These request caps are not per-account storage quotas or full validation of encrypted envelopes.
+
+### Configure Caddy trust before public launch
+
+By default, `X-Forwarded-For` and `X-Real-IP` are ignored. With a reverse proxy this means clients share the
+proxy's IP allowance until you configure `API_TRUSTED_PROXY_IPS` with the **exact socket-peer IPs of Caddy**.
+The API bind address (`172.17.0.1`) is usually NOT Caddy's source IP.
+
+Find the Caddy container's network addresses on the droplet:
+
+```bash
+docker inspect exam-prod-caddy-1 --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\\n"}}{{end}}'
+```
+
+Choose the address on the network that connects to the API, then either supply it as the setup script's third
+argument or add a systemd override with `sudo systemctl edit deeznote-api`:
+
+```ini
+[Service]
+Environment="API_TRUSTED_PROXY_IPS=172.18.0.2"
+```
+
+Replace that example IP with the actual address, then run `sudo systemctl daemon-reload` and
+`sudo systemctl restart deeznote-api`. For allowlisted peers only, the API uses the rightmost valid
+`X-Forwarded-For` IP appended by Caddy. Keep Caddy's default behavior of rebuilding/appending this header;
+do not configure it to pass through a client-supplied value unchanged. Additional upstream proxies require
+reviewing the trust chain before changing this policy. Keep the API bound privately and firewall access
+restricted to the proxy. Prefer a stable container IP; update the allowlist if Caddy's IP changes.
+
+Apply the web security-header block in step 3 to an existing Caddy site too; deploying the API alone does not
+change Caddy configuration. The web CSP above blocks framing, objects, and foreign base URLs, but is NOT a strict
+script-policy/XSS defense. The API separately returns `no-store`, `nosniff`, `no-referrer`, and a restrictive CSP
+for its JSON responses. HTTPS/HSTS policy is managed at the proxy, not by an HTTP-only internal API.
+
+After deployment, verify headers and rate responses through Caddy in a controlled test, and confirm that different
+clients get different rate buckets and spoofed forwarded headers do not bypass limits.
 
 ## Day to day
 
