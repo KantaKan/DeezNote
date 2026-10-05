@@ -57,7 +57,7 @@ export function PrivacyEn() {
         <li><strong>Your encrypted vault:</strong> your vault key, encrypted in your browser with your passphrase, plus the salt and nonce needed to unlock it there.</li>
         <li><strong>Your encrypted notes:</strong> the ciphertext described above, plus a random note ID, a version number and the time each note was last saved.</li>
         <li><strong>Sign-in sessions:</strong> a hash of each session token and when it expires (30 days after signing in).</li>
-        <li><strong>Access logs:</strong> for each request to the site, the IP address, time, method, path, response status and browser user agent. Thailand's Computer-Related Crime Act requires service providers to keep this traffic data for at least 90 days.</li>
+        <li><strong>Access logs:</strong> for each request to the site, the IP address and port, time, method, the address requested, and the response status, size and duration. Request headers, sign-in tokens and cookies are not logged. Thailand's Computer-Related Crime Act requires service providers to keep this traffic data for at least 90 days.</li>
         <li><strong>Abuse counters:</strong> to block brute-force and spam, the server counts recent requests per IP address and sign-in attempts per email, in memory only. These counters reset within an hour and are never written to disk.</li>
       </List>
     </Section>
@@ -121,7 +121,7 @@ export function PrivacyTh() {
         <li><strong>คลังที่เข้ารหัส:</strong> กุญแจคลังที่ถูกเข้ารหัสในเบราว์เซอร์ด้วยรหัสผ่านคลังของคุณ พร้อมค่า salt และ nonce ที่ใช้ปลดล็อกในเบราว์เซอร์</li>
         <li><strong>โน้ตที่เข้ารหัส:</strong> ข้อมูลเข้ารหัสตามที่อธิบายข้างต้น พร้อมรหัสโน้ตแบบสุ่ม หมายเลขเวอร์ชัน และเวลาที่บันทึกล่าสุด</li>
         <li><strong>เซสชันการเข้าสู่ระบบ:</strong> ค่าแฮชของโทเคนเซสชัน และเวลาหมดอายุ (30 วันหลังเข้าสู่ระบบ)</li>
-        <li><strong>ข้อมูลจราจรทางคอมพิวเตอร์ (log):</strong> สำหรับแต่ละคำขอที่เข้ามายังเว็บไซต์ เราเก็บหมายเลข IP เวลา เมธอด พาธ สถานะการตอบกลับ และข้อมูลเบราว์เซอร์ (user agent) ตามที่พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์กำหนดให้ผู้ให้บริการเก็บไว้ไม่น้อยกว่า 90 วัน</li>
+        <li><strong>ข้อมูลจราจรทางคอมพิวเตอร์ (log):</strong> สำหรับแต่ละคำขอที่เข้ามายังเว็บไซต์ เราเก็บหมายเลข IP และพอร์ต เวลา เมธอด ที่อยู่ที่ร้องขอ สถานะ ขนาด และระยะเวลาของการตอบกลับ โดยไม่บันทึก header ของคำขอ โทเคนเข้าสู่ระบบ หรือคุกกี้ ทั้งนี้ตามที่พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์กำหนดให้ผู้ให้บริการเก็บไว้ไม่น้อยกว่า 90 วัน</li>
         <li><strong>ตัวนับเพื่อป้องกันการโจมตี:</strong> เพื่อป้องกันการเดารหัสผ่านและสแปม เซิร์ฟเวอร์จะนับจำนวนคำขอล่าสุดต่อหมายเลข IP และจำนวนครั้งที่พยายามเข้าสู่ระบบต่ออีเมล โดยเก็บไว้ในหน่วยความจำเท่านั้น ตัวนับจะรีเซ็ตภายในหนึ่งชั่วโมงและไม่ถูกบันทึกลงดิสก์</li>
       </List>
     </Section>
