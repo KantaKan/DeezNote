@@ -6,22 +6,23 @@ A local-first, end-to-end encrypted Markdown notes app. Encryption happens in th
 
 - Bun + Elysia API
 - React + Vite web app
-- PostgreSQL + Drizzle ORM
+- SQLite (Bun's built-in driver, WAL mode) + Drizzle ORM
 - Dexie/IndexedDB offline cache
 - libsodium Argon2id + XChaCha20-Poly1305
 - MinIO locally for the upcoming encrypted attachment flow
 
 ## Run locally
 
-Requires Bun and Docker.
+Requires Bun. The database is a single SQLite file, created and migrated automatically when the API starts.
 
 ```bash
 cp .env.example .env
-docker compose up -d
 bun install
-bun run db:migrate
 bun run dev
 ```
+
+After changing `apps/api/src/db/schema.ts`, run `bun run db:generate` to add a migration.
+`docker compose up -d` is only needed for MinIO (the upcoming attachment flow).
 
 Open http://localhost:5173. The API listens on http://localhost:3000.
 

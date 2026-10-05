@@ -6,3 +6,7 @@ dist/
 .DS_Store
 coverage/
 *.tsbuildinfo
+apps/api/data/
+*.db
+*.db-shm
+*.db-wal

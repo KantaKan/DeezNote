@@ -9,6 +9,11 @@ const credentials = t.Object({
   password: t.String({ minLength: 10, maxLength: 200 }),
 });
 
+// OWASP's minimum Argon2id profile (19 MiB, 2 passes): about a third of Bun's 64 MiB default,
+// so concurrent logins don't spike memory on a small server. Existing hashes keep verifying,
+// because each hash stores its own parameters. Note encryption is client-side and unaffected.
+const PASSWORD_HASH_OPTIONS = { algorithm: "argon2id", memoryCost: 19_456, timeCost: 2 } as const;
+
 export const authRoutes = new Elysia({ name: "routes.auth", prefix: "/auth" })
   .post("/register", async ({ body, set }) => {
     const email = body.email.trim().toLowerCase();
@@ -19,7 +24,7 @@ export const authRoutes = new Elysia({ name: "routes.auth", prefix: "/auth" })
     }
 
     const id = crypto.randomUUID();
-    const passwordHash = await Bun.password.hash(body.password, { algorithm: "argon2id" });
+    const passwordHash = await Bun.password.hash(body.password, PASSWORD_HASH_OPTIONS);
     await db.insert(users).values({ id, email, passwordHash });
     return { user: { id, email }, ...(await createSession(id)) };
   }, { body: credentials })

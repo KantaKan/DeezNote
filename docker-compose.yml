@@ -1,20 +1,4 @@
 services:
-  postgres:
-    image: postgres:17-alpine
-    environment:
-      POSTGRES_USER: savetext
-      POSTGRES_PASSWORD: savetext
-      POSTGRES_DB: savetext
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U savetext"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
   minio:
     image: minio/minio:latest
     command: server /data --console-address ":9001"
@@ -28,5 +12,4 @@ services:
       - minio-data:/data
 
 volumes:
-  postgres-data:
   minio-data:

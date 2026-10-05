@@ -1,0 +1,53 @@
+name: Build
+
+# Builds happen here, not on the droplet: `vite build` can run out of memory on a 1 GB server.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      - run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: |
+          bun run --cwd apps/api typecheck
+          bun run --cwd apps/web typecheck
+
+      - name: Test
+        run: bun test
+
+      - name: Build web
+        working-directory: apps/web
+        # Set the VITE_API_URL repository variable if the API isn't served at /api on the same domain.
+        env:
+          VITE_API_URL: ${{ vars.VITE_API_URL || '/api' }}
+        run: bunx vite build
+
+      - name: Build API
+        run: bun run --cwd apps/api build
+
+      # One self-contained release: the bundled API needs no node_modules, only Bun.
+      - name: Package release
+        run: |
+          mkdir -p release/api
+          cp -r apps/web/dist release/web
+          cp -r apps/api/dist release/api/dist
+          cp -r apps/api/drizzle release/api/drizzle
+          tar -czf deeznote-release.tar.gz -C release .
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deeznote-release
+          path: deeznote-release.tar.gz
+          retention-days: 14
