@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
+import { ArrowDown, ArrowRight, Code, Key, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
 import { useEffect, useRef, type ReactNode } from "react";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
@@ -156,16 +156,32 @@ export function Landing() {
         </div>
       </section>
 
-      {/* The honest trade-off, stated plainly. */}
-      <section className="border-t border-neutral-200">
-        <div data-reveal className="mx-auto max-w-4xl px-5 py-24 text-center sm:px-8 lg:py-32">
-          <p className="text-balance text-3xl font-semibold leading-tight tracking-[-.03em] sm:text-4xl lg:text-5xl">Forget your passphrase and your notes are gone. Nobody can reset it, not even us.</p>
-          <p className="mx-auto mt-8 max-w-[58ch] text-lg leading-relaxed text-neutral-600">That is the price of real privacy. DeezNote is open source and has not had an independent security audit yet, so check the code before trusting it with secrets.</p>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="mt-8 inline-flex items-center gap-1.5 text-[0.9375rem] font-medium text-amber-700 underline decoration-amber-400/60 underline-offset-4 transition hover:decoration-amber-600">Read the code <ArrowRight size={15} weight="bold" /></a>
+      {/* The honest trade-off: the limitation is the privacy promise, plus what that means for you. */}
+      <section className="border-y border-neutral-200 bg-neutral-50">
+        <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-20 lg:py-28">
+          <h2 data-reveal className="max-w-[16ch] text-balance text-4xl font-bold leading-[1.05] tracking-[-.04em] sm:text-5xl">We can't reset your passphrase. <span className="text-neutral-500">That's the point.</span></h2>
+
+          <div data-reveal className="grid content-start gap-10 lg:pt-2">
+            <div className="flex gap-4">
+              <Key size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
+              <div>
+                <h3 className="font-semibold text-neutral-950">Your key never leaves your device</h3>
+                <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Your passphrase unlocks your notes inside your browser. We never receive it, so there is nothing to reset. Keep it somewhere safe.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 border-t border-neutral-200 pt-10">
+              <Code size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
+              <div>
+                <h3 className="font-semibold text-neutral-950">Open source, not yet audited</h3>
+                <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Anyone can read how the encryption works. It has not had an independent audit yet, so hold off on your most sensitive secrets.</p>
+                <a href={REPO_URL} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-[0.9375rem] font-medium text-amber-700 underline decoration-amber-400/60 underline-offset-4 transition hover:decoration-amber-600">Read the code <ArrowRight size={15} weight="bold" /></a>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="border-t border-neutral-200">
+      <section>
         <div data-reveal className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-5 py-16 sm:px-8 md:flex-row md:items-center">
           <h2 className="text-2xl font-bold tracking-[-.03em] sm:text-3xl">Start writing privately.</h2>
           <a {...linkProps("/signup")} className={primaryButton}>Create account <ArrowRight size={16} weight="bold" /></a>
