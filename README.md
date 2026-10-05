@@ -26,6 +26,10 @@ After changing `apps/api/src/db/schema.ts`, run `bun run db:generate` to add a m
 
 Open http://localhost:5173. The API listens on http://localhost:3000.
 
+## Deploy
+
+Pushes to `main` build in GitHub Actions and deploy to the droplet over SSH, with automatic rollback. See [DEPLOY.md](DEPLOY.md).
+
 ## Tests
 
 ```bash

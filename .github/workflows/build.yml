@@ -1,4 +1,4 @@
-name: Build
+name: Build and deploy
 
 # Builds happen here, not on the droplet: `vite build` can run out of memory on a 1 GB server.
 on:
@@ -44,6 +44,7 @@ jobs:
           cp -r apps/web/dist release/web
           cp -r apps/api/dist release/api/dist
           cp -r apps/api/drizzle release/api/drizzle
+          cp -r deploy release/deploy
           tar -czf deeznote-release.tar.gz -C release .
 
       - uses: actions/upload-artifact@v4
@@ -51,3 +52,50 @@ jobs:
           name: deeznote-release
           path: deeznote-release.tar.gz
           retention-days: 14
+
+  # Ships the release to the droplet. Only for pushes to main, never for pull requests
+  # (secrets are not available to fork PRs on a public repo anyway).
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: deeznote-release
+
+      - name: Set up SSH
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          cat >> ~/.ssh/config <<EOF
+          Host droplet
+            HostName ${{ secrets.DEPLOY_HOST }}
+            User deeznote
+            IdentityFile ~/.ssh/deploy_key
+            StrictHostKeyChecking yes
+          EOF
+
+      - name: Upload and activate
+        env:
+          RELEASE: /srv/deeznote/releases/${{ github.sha }}
+        run: |
+          scp deeznote-release.tar.gz "droplet:$RELEASE.tar.gz"
+          ssh droplet "set -e
+            mkdir -p '$RELEASE'
+            tar -xzf '$RELEASE.tar.gz' -C '$RELEASE'
+            rm '$RELEASE.tar.gz'
+            bash '$RELEASE/deploy/activate.sh'"
+
+      - name: Remove SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
