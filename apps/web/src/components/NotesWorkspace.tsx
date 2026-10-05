@@ -454,7 +454,7 @@ export function NotesWorkspace({ vaultKey, onLock, onLogout }: Props) {
       </header>
 
       <section className="mx-auto h-[calc(100vh-3.5rem)] max-w-[850px] overflow-y-auto px-6 pt-12 sm:px-12 sm:pt-16">
-        <input ref={titleRef} className="w-full border-0 bg-transparent text-6xl font-bold leading-[.98] tracking-[-.055em] text-neutral-950 outline-none placeholder:text-neutral-300 disabled:cursor-default sm:text-7xl lg:text-8xl" value={draft.title} onChange={(event) => changeDraft({ ...draft, title: event.target.value })} placeholder="Untitled" disabled={currentNote?.locked} />
+        <input ref={titleRef} className="w-full border-0 bg-transparent text-4xl font-bold leading-[1.05] tracking-[-.045em] text-neutral-950 outline-none placeholder:text-neutral-300 disabled:cursor-default sm:text-5xl lg:text-6xl" value={draft.title} onChange={(event) => changeDraft({ ...draft, title: event.target.value })} placeholder="Untitled" disabled={currentNote?.locked} />
         <div className="mt-3 text-[0.6875rem] text-neutral-400">Encrypted note <span className="px-1 text-neutral-300">·</span> Autosaves as you write</div>
         <div className="mt-5 flex min-h-8 flex-wrap items-center gap-1.5">
           <Tag className="mr-1 text-neutral-300" size={16} weight="duotone" />
