@@ -68,6 +68,24 @@ jobs:
         with:
           name: deeznote-release
 
+      # Fail early with a readable reason (shown as an annotation) instead of a bare SSH error.
+      - name: Check deploy secrets
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          fail() { echo "::error title=Deploy secrets::$1"; exit 1; }
+          [ -n "$DEPLOY_HOST" ] || fail "DEPLOY_HOST is empty. Set it to the droplet's IP address."
+          printf '%s\n' "$DEPLOY_HOST" | grep -Eq '^[0-9A-Za-z.:-]+$' || fail "DEPLOY_HOST must be just the IP or hostname, with no spaces, user@ or https://."
+          [ -n "$DEPLOY_SSH_KEY" ] || fail "DEPLOY_SSH_KEY is empty."
+          printf '%s\n' "$DEPLOY_SSH_KEY" | grep -q "PRIVATE KEY-----" || fail "DEPLOY_SSH_KEY is not a private key. Paste the whole file ~/.ssh/deeznote_deploy (not the .pub), including the BEGIN and END lines."
+          printf '%s\n' "$DEPLOY_SSH_KEY" > /tmp/key && chmod 600 /tmp/key
+          ssh-keygen -y -f /tmp/key > /dev/null 2>&1 || { rm -f /tmp/key; fail "DEPLOY_SSH_KEY can't be read. Re-copy it with: cat ~/.ssh/deeznote_deploy"; }
+          rm -f /tmp/key
+          [ -n "$DEPLOY_KNOWN_HOSTS" ] || fail "DEPLOY_KNOWN_HOSTS is empty. Set it to the output of: ssh-keyscan -t ed25519 <droplet IP>"
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | grep -v '^#' | grep -q "^$DEPLOY_HOST " || fail "DEPLOY_KNOWN_HOSTS has no line starting with DEPLOY_HOST. Re-run ssh-keyscan -t ed25519 <droplet IP> and paste its output."
+
       - name: Set up SSH
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -84,6 +102,14 @@ jobs:
             IdentityFile ~/.ssh/deploy_key
             StrictHostKeyChecking yes
           EOF
+
+      - name: Check SSH login
+        run: |
+          if ! ssh -o BatchMode=yes -o ConnectTimeout=15 droplet true 2> ssh.log; then
+            reason=$(grep -Ei "denied|refused|timed out|host key|no route|could not resolve|verification failed" ssh.log | head -1)
+            echo "::error title=SSH login failed::${reason:-$(tail -1 ssh.log)}"
+            exit 1
+          fi
 
       - name: Upload and activate
         env:
