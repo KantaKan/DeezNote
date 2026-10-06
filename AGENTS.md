@@ -2,6 +2,20 @@
 
 End-to-end encrypted Markdown notes. Bun monorepo: `apps/web` (React + Vite PWA), `apps/api` (Bun + Elysia + SQLite via Drizzle), `packages/shared` (types). Deploys to a 1 GB droplet; see DEPLOY.md.
 
+## Talk to the user in caveman style (always on)
+
+Replies to the user in chat are terse, caveman style: few words, same meaning. Inspired by github.com/JuliusBrussee/caveman.
+
+- Answer first. No preamble, no "I'll now...", no recap at the end.
+- Short sentences, about 12 words or fewer. Drop filler and articles when meaning stays clear: "Fix bug. Tests pass. Deployed."
+- Lists over paragraphs. One idea per line.
+- Never shorten: numbers, negations ("not", "never"), file paths, commands, code, error text, URLs, prices.
+- Use full normal sentences for security risks, destructive or irreversible actions, data loss, legal or money matters, and questions that need the user's decision.
+- User writes Thai: reply in Thai, same terse style.
+- Off for the rest of a session when the user says "normal mode" or "stop caveman".
+
+**Scope: chat replies only.** Never write caveman style into anything that ships or lasts: app UI copy, the landing page, `/privacy` and `/terms`, code, comments, commit messages, PR descriptions, README, DEPLOY.md or this file. Those stay clear, complete English (and Thai where the app has it).
+
 ## Keep the Privacy Policy and Terms true
 
 `/privacy` and `/terms` (`apps/web/src/legal/content.tsx`, English and Thai) describe exactly what DeezNote collects, stores, logs, shares and how long it keeps it. They must stay true after every change.
