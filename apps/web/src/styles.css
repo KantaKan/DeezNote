@@ -4,6 +4,7 @@
 
 @theme {
   --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: "Bricolage Grotesque Variable", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, sans-serif;
   --animate-shake: shake .36s cubic-bezier(.36, .07, .19, .97);
   @keyframes shake {
     20%, 60% { transform: translateX(-5px); }
