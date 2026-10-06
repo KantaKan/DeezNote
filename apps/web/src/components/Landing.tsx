@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowRight, Check, Code, Crown, Key, List, MarkdownLogo, Star, WifiSlash } from "@phosphor-icons/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { REPO_URL } from "../legal/policy";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
@@ -51,24 +51,70 @@ function useReveal() {
   return rootRef;
 }
 
-// Pro pricing. Thai visitors see baht; everyone else sees US dollars.
-const PRICES = {
-  thb: { monthly: "฿79", yearly: "฿490", yearlyAsMonthly: "฿41", save: "48%" },
-  usd: { monthly: "$2.99", yearly: "$17.99", yearlyAsMonthly: "$1.50", save: "50%" },
+// Pro pricing as numbers, so the savings calculator can do the maths. Thai visitors see baht; everyone else US dollars.
+const PLANS = {
+  thb: { currency: "THB", locale: "th-TH", decimals: 0, monthly: 79, yearly: 490 },
+  usd: { currency: "USD", locale: "en-US", decimals: 2, monthly: 2.99, yearly: 17.99 },
 } as const;
+type PlanPrices = (typeof PLANS)[keyof typeof PLANS];
 
-function localPrices() {
+function localPlan(): PlanPrices {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return zone === "Asia/Bangkok" || navigator.language.toLowerCase().startsWith("th") ? PRICES.thb : PRICES.usd;
+  return zone === "Asia/Bangkok" || navigator.language.toLowerCase().startsWith("th") ? PLANS.thb : PLANS.usd;
+}
+
+function money(amount: number, plan: PlanPrices) {
+  return new Intl.NumberFormat(plan.locale, { style: "currency", currency: plan.currency, minimumFractionDigits: plan.decimals, maximumFractionDigits: plan.decimals }).format(Math.round(amount * 100) / 100);
+}
+
+function savePercent(plan: PlanPrices) {
+  return Math.round((1 - plan.yearly / (plan.monthly * 12)) * 100);
 }
 
 function Feature({ children, inverted = false }: { children: ReactNode; inverted?: boolean }) {
   return <li className="flex gap-2.5"><Check size={16} weight="bold" className={`mt-1 shrink-0 ${inverted ? "text-amber-400" : "text-amber-600"}`} />{children}</li>;
 }
 
+/** Drag the years; see what paying monthly vs yearly costs and what yearly keeps in your pocket. */
+function SavingsCalculator({ plan }: { plan: PlanPrices }) {
+  const [years, setYears] = useState(3);
+  const monthlyTotal = plan.monthly * 12 * years;
+  const yearlyTotal = plan.yearly * years;
+  const saved = monthlyTotal - yearlyTotal;
+  const freeMonths = Math.floor(saved / plan.monthly);
+
+  return <div data-reveal className="mt-4 grid gap-8 rounded-2xl bg-neutral-50 p-7 ring-1 ring-neutral-900/[.07] sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-14">
+    <div>
+      <h3 className="text-xl font-semibold tracking-tight">See what yearly saves you</h3>
+      <p className="mt-2 text-[0.9375rem] leading-relaxed text-neutral-600">Drag to how long you'd keep Pro.</p>
+      <label className="mt-7 block">
+        <span className="flex items-baseline justify-between text-sm">
+          <span className="font-medium text-neutral-800">Years of Pro</span>
+          <span className="text-2xl font-bold tabular-nums tracking-tight">{years}</span>
+        </span>
+        <input type="range" min={1} max={5} step={1} value={years} onChange={(event) => setYears(Number(event.target.value))} className="savings-range mt-4 w-full" style={{ "--fill": `${((years - 1) / 4) * 100}%` } as CSSProperties} aria-valuetext={`${years} ${years === 1 ? "year" : "years"}`} />
+        <span className="mt-1 flex justify-between px-1 text-xs tabular-nums text-neutral-400" aria-hidden="true">{[1, 2, 3, 4, 5].map((n) => <span key={n}>{n}</span>)}</span>
+      </label>
+    </div>
+
+    <div role="status" aria-live="polite">
+      <dl className="grid gap-3 text-[0.9375rem]">
+        <div className="flex items-baseline justify-between gap-4"><dt className="text-neutral-600">Paying monthly</dt><dd className="tabular-nums text-neutral-500 line-through decoration-neutral-400/70">{money(monthlyTotal, plan)}</dd></div>
+        <div className="flex items-baseline justify-between gap-4"><dt className="text-neutral-600">Paying yearly</dt><dd className="font-medium tabular-nums text-neutral-900">{money(yearlyTotal, plan)}</dd></div>
+      </dl>
+      <div className="mt-5 border-t border-neutral-200 pt-5">
+        <p className="text-sm font-medium text-neutral-600">You save</p>
+        <p className="mt-1 text-5xl font-bold tabular-nums tracking-[-.04em] text-amber-600">{money(saved, plan)}</p>
+        <p className="mt-2 text-sm text-neutral-500">That's {freeMonths} months of Pro, free.</p>
+      </div>
+    </div>
+  </div>;
+}
+
 function Pricing() {
   const [yearly, setYearly] = useState(true);
-  const prices = localPrices();
+  const plan = localPlan();
+  const percent = savePercent(plan);
 
   return <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 pb-20 sm:px-8 lg:pb-28">
     <div data-reveal className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
@@ -84,41 +130,49 @@ function Pricing() {
           aria-checked={yearly === value}
           className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium transition ${yearly === value ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
           onClick={() => setYearly(value)}
-        >{label}{value && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-amber-800">Save {prices.save}</span>}</button>)}
+        >{label}{value && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-amber-800">Save {percent}%</span>}</button>)}
       </div>
     </div>
 
     <div className="mt-12 grid gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <article data-reveal className="flex flex-col rounded-2xl bg-neutral-50 p-7 ring-1 ring-neutral-900/[.07] sm:p-8">
         <h3 className="text-lg font-semibold tracking-tight">Free</h3>
-        <p className="mt-4 flex items-baseline gap-1.5"><span className="text-4xl font-bold tracking-[-.04em]">{prices === PRICES.thb ? "฿0" : "$0"}</span><span className="text-neutral-500">forever</span></p>
+        <p className="mt-5 flex items-baseline gap-1.5"><span className="text-5xl font-bold tabular-nums tracking-[-.04em]">{plan.currency === "THB" ? "฿0" : "$0"}</span><span className="text-neutral-500">forever</span></p>
+        <p className="mt-2 text-sm text-neutral-500">Everything you need to write privately.</p>
         <ul className="mt-7 grid gap-3 text-[0.9375rem] text-neutral-700">
           <Feature>End-to-end encryption on every note</Feature>
           <Feature>Works offline, syncs across your devices</Feature>
           <Feature>Note passwords, colours and favourites</Feature>
           <Feature>256 KB per note, 25 MB in total</Feature>
         </ul>
-        <a {...linkProps("/signup")} className={`${secondaryButton} mt-8 self-start`}>Create account</a>
+        <div className="mt-auto pt-8"><a {...linkProps("/signup")} className={secondaryButton}>Create account</a></div>
       </article>
 
-      <article data-reveal className={`flex flex-col rounded-2xl bg-neutral-900 p-7 text-neutral-50 sm:p-8 ${panelShadow}`}>
+      {/* Premium through restraint: a fine amber edge and one soft warm light, no glow. */}
+      <article data-reveal className={`relative isolate flex flex-col overflow-hidden rounded-2xl bg-neutral-900 p-7 text-neutral-50 ring-1 ring-amber-400/40 sm:p-8 ${panelShadow}`}>
+        <span aria-hidden="true" className="pointer-events-none absolute -right-28 -top-28 -z-10 size-80 rounded-full bg-amber-400/15 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-8 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
         <div className="flex items-center justify-between gap-4">
           <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight"><Crown size={18} weight="duotone" className="text-amber-400" /> Pro</h3>
-          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-neutral-300">Coming soon</span>
+          <span className="rounded-full bg-amber-400 px-2.5 py-1 text-xs font-semibold text-amber-950">Best value</span>
         </div>
-        <p className="mt-4 flex items-baseline gap-1.5">
-          <span className="text-4xl font-bold tracking-[-.04em]">{yearly ? prices.yearly : prices.monthly}</span>
+        <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          {yearly && <span className="text-xl tabular-nums text-neutral-500 line-through decoration-neutral-500/70">{money(plan.monthly * 12, plan)}</span>}
+          <span className="text-5xl font-bold tabular-nums tracking-[-.04em]">{money(yearly ? plan.yearly : plan.monthly, plan)}</span>
           <span className="text-neutral-400">{yearly ? "per year" : "per month"}</span>
-        </p>
-        <p className="mt-1.5 text-sm text-neutral-400">{yearly ? `That's ${prices.yearlyAsMonthly} a month, billed once a year.` : `Or ${prices.yearly} a year and save ${prices.save}.`}</p>
+        </div>
+        <p className="mt-2 text-sm text-neutral-400">{yearly ? `${money(plan.yearly / 12, plan)} a month, billed once a year.` : `Switch to yearly and save ${percent}%.`}</p>
         <ul className="mt-7 grid gap-3 text-[0.9375rem] text-neutral-200">
           <Feature inverted>Everything in Free</Feature>
           <Feature inverted>Notes up to 8 MB, with room for photos</Feature>
           <Feature inverted>1 GB of encrypted storage</Feature>
           <Feature inverted>Supports an independent, open-source app</Feature>
         </ul>
+        <p className="mt-8 border-t border-white/10 pt-5 text-sm text-neutral-400">Coming soon. Start on Free today and your notes come with you.</p>
       </article>
     </div>
+
+    <SavingsCalculator plan={plan} />
   </section>;
 }
 
