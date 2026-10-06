@@ -4,7 +4,7 @@ import { config } from "./config";
 import { accountRoutes } from "./routes/account";
 import { createAuthRoutes } from "./routes/auth";
 import { healthRoutes } from "./routes/health";
-import { noteRoutes } from "./routes/notes";
+import { createNoteRoutes } from "./routes/notes";
 import { vaultRoutes } from "./routes/vault";
 
 import { RequestProtectionError, Security } from "./services/security";
@@ -47,7 +47,7 @@ export function createApp(security = new Security()) {
   .use(createAuthRoutes(security))
   .use(accountRoutes)
   .use(vaultRoutes)
-  .use(noteRoutes);
+  .use(createNoteRoutes(security));
 }
 
 export const app = createApp();

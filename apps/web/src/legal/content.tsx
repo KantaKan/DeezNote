@@ -58,7 +58,7 @@ export function PrivacyEn() {
         <li><strong>Your encrypted notes:</strong> the ciphertext described above, plus a random note ID, a version number and the time each note was last saved.</li>
         <li><strong>Sign-in sessions:</strong> a hash of each session token and when it expires (30 days after signing in).</li>
         <li><strong>Access logs:</strong> for each request to the site, the IP address and port, time, method, the address requested, and the response status, size and duration. Request headers, sign-in tokens and cookies are not logged. Thailand's Computer-Related Crime Act requires service providers to keep this traffic data for at least 90 days.</li>
-        <li><strong>Abuse counters:</strong> to block brute-force and spam, the server counts recent requests per IP address and sign-in attempts per email, in memory only. These counters reset within an hour and are never written to disk.</li>
+        <li><strong>Abuse counters:</strong> to block brute-force and spam, the server counts recent requests per IP address, sign-in attempts per email, and note writes and uploaded bytes per account ID, in memory only. Their limit windows expire within an hour; expired entries are reclaimed when reused or when space is needed, and all counters clear on restart. They are never written to disk.</li>
       </List>
     </Section>
     <Section title="On your device">
@@ -122,7 +122,7 @@ export function PrivacyTh() {
         <li><strong>โน้ตที่เข้ารหัส:</strong> ข้อมูลเข้ารหัสตามที่อธิบายข้างต้น พร้อมรหัสโน้ตแบบสุ่ม หมายเลขเวอร์ชัน และเวลาที่บันทึกล่าสุด</li>
         <li><strong>เซสชันการเข้าสู่ระบบ:</strong> ค่าแฮชของโทเคนเซสชัน และเวลาหมดอายุ (30 วันหลังเข้าสู่ระบบ)</li>
         <li><strong>ข้อมูลจราจรทางคอมพิวเตอร์ (log):</strong> สำหรับแต่ละคำขอที่เข้ามายังเว็บไซต์ เราเก็บหมายเลข IP และพอร์ต เวลา เมธอด ที่อยู่ที่ร้องขอ สถานะ ขนาด และระยะเวลาของการตอบกลับ โดยไม่บันทึก header ของคำขอ โทเคนเข้าสู่ระบบ หรือคุกกี้ ทั้งนี้ตามที่พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์กำหนดให้ผู้ให้บริการเก็บไว้ไม่น้อยกว่า 90 วัน</li>
-        <li><strong>ตัวนับเพื่อป้องกันการโจมตี:</strong> เพื่อป้องกันการเดารหัสผ่านและสแปม เซิร์ฟเวอร์จะนับจำนวนคำขอล่าสุดต่อหมายเลข IP และจำนวนครั้งที่พยายามเข้าสู่ระบบต่ออีเมล โดยเก็บไว้ในหน่วยความจำเท่านั้น ตัวนับจะรีเซ็ตภายในหนึ่งชั่วโมงและไม่ถูกบันทึกลงดิสก์</li>
+        <li><strong>ตัวนับเพื่อป้องกันการโจมตี:</strong> เพื่อป้องกันการเดารหัสผ่านและสแปม เซิร์ฟเวอร์จะนับจำนวนคำขอต่อหมายเลข IP จำนวนครั้งที่พยายามเข้าสู่ระบบต่ออีเมล และจำนวนการเขียนโน้ตกับปริมาณไบต์ที่อัปโหลดต่อรหัสบัญชี โดยเก็บไว้ในหน่วยความจำเท่านั้น ช่วงเวลาของขีดจำกัดจะสิ้นสุดภายในหนึ่งชั่วโมง รายการที่หมดอายุจะถูกล้างเมื่อใช้ซ้ำหรือเมื่อต้องการพื้นที่ และตัวนับทั้งหมดจะถูกล้างเมื่อรีสตาร์ต โดยไม่บันทึกลงดิสก์</li>
       </List>
     </Section>
     <Section title="ข้อมูลบนอุปกรณ์ของคุณ">
@@ -185,6 +185,7 @@ export function TermsEn() {
         <li><strong>Free:</strong> up to 256 KB per note and 25 MB in total.</li>
         <li><strong>Pro:</strong> up to 8 MB per note and 1 GB in total. Pro is not on sale yet; its price and payment terms will be added here before it is.</li>
       </List>
+      <p>Accounts are also limited to 1,000 notes. To protect the service, an account may make up to 90 note saves or deletions and upload up to 20 MiB of note-request data per minute, shared across all its sessions and devices. Temporarily exceeding these rates delays syncing; it does not delete existing notes.</p>
       <p>A change that goes over your limit stays saved on your device and syncs once the note fits. We may change the limits; if a change would affect notes you already have, we'll give notice first.</p>
     </Section>
     <Section title="Your account and passphrase">
@@ -232,6 +233,7 @@ export function TermsTh() {
         <li><strong>Free:</strong> โน้ตละไม่เกิน 256 KB และรวมทั้งหมดไม่เกิน 25 MB</li>
         <li><strong>Pro:</strong> โน้ตละไม่เกิน 8 MB และรวมทั้งหมดไม่เกิน 1 GB ขณะนี้ยังไม่เปิดขาย Pro เราจะเพิ่มราคาและเงื่อนไขการชำระเงินในหน้านี้ก่อนเปิดขาย</li>
       </List>
+      <p>แต่ละบัญชีมีโน้ตได้ไม่เกิน 1,000 อัน เพื่อป้องกันการใช้งานที่ทำให้ระบบรับภาระเกิน แต่ละบัญชีบันทึกหรือลบโน้ตได้รวมไม่เกิน 90 ครั้ง และอัปโหลดข้อมูลคำขอของโน้ตได้ไม่เกิน 20 MiB ต่อนาที โดยนับรวมทุกเซสชันและอุปกรณ์ การเกินอัตรานี้ชั่วคราวจะทำให้การซิงก์ล่าช้า แต่ไม่ลบโน้ตเดิม</p>
       <p>การแก้ไขที่เกินขีดจำกัดจะยังถูกบันทึกไว้บนอุปกรณ์ของคุณ และจะซิงก์เมื่อขนาดโน้ตอยู่ในขีดจำกัด เราอาจปรับขีดจำกัดได้ หากการปรับนั้นกระทบโน้ตที่คุณมีอยู่แล้ว เราจะแจ้งให้ทราบล่วงหน้า</p>
     </Section>
     <Section title="บัญชีและรหัสผ่านคลังของคุณ">

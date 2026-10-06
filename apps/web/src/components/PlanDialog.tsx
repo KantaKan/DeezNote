@@ -9,11 +9,12 @@ export function formatBytes(bytes: number) {
   return `${(bytes / 1024 / 1024 / 1024).toFixed(1)} GB`;
 }
 
-export type PlanReason = "note-too-large" | "storage-full" | "image-too-large";
+export type PlanReason = "note-too-large" | "storage-full" | "image-too-large" | "note-limit";
 
 const REASONS: Record<PlanReason, { title: string; body: string }> = {
   "note-too-large": { title: "This note is too big for Free", body: "Your change is safe on this device, but it can't sync until the note is smaller. Remove a photo or split the note." },
   "storage-full": { title: "Your storage is full", body: "Your change is safe on this device, but it can't sync until you free up space, for example by deleting notes with photos." },
+  "note-limit": { title: "You've reached 1,000 notes", body: "Your new note is safe on this device, but it can't sync until you delete a note you no longer need. This limit is the same on every plan." },
   "image-too-large": { title: "That photo won't fit in this note", body: "On Free, each note can hold up to the size below. Try a smaller photo, or put it in its own note." },
 };
 
@@ -52,7 +53,7 @@ export function PlanDialog({ account, reason, onClose }: { account: Account; rea
       <h2 className="text-2xl font-semibold tracking-[-0.03em] text-neutral-950">{intro.title}</h2>
       <p className="mt-2.5 text-sm leading-6 text-neutral-500">{intro.body}</p>
       <div className="mt-7"><StorageCard account={account} /></div>
-      {account.plan !== "pro" && <div className="mt-6"><ProPerks /></div>}
+      {account.plan !== "pro" && reason !== "note-limit" && <div className="mt-6"><ProPerks /></div>}
       <footer className="mt-8 flex justify-end border-t border-neutral-100 pt-5">
         <button type="button" className="-mr-2 rounded-md px-2 py-1 text-sm text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-950" onClick={close}>Close</button>
       </footer>

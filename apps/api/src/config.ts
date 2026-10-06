@@ -39,6 +39,9 @@ export const config = {
     loginsPerAccountWindow: positiveInteger("API_LOGINS_PER_ACCOUNT_WINDOW", 20),
     maxConcurrentHashes: positiveInteger("API_MAX_CONCURRENT_HASHES", 2),
     maxRateLimitKeys: positiveInteger("API_MAX_RATE_LIMIT_KEYS", 10_000),
+    noteWritesPerMinute: positiveInteger("API_NOTE_WRITES_PER_MINUTE", 90),
+    noteUploadBytesPerMinute: positiveInteger("API_NOTE_UPLOAD_BYTES_PER_MINUTE", 20 * 1024 * 1024),
+    maxNotesPerAccount: positiveInteger("API_MAX_NOTES_PER_ACCOUNT", 1000),
     // Exact socket-peer allowlist, never a blanket trust of forwarded headers.
     trustedProxyIps: (process.env.API_TRUSTED_PROXY_IPS ?? "").split(",").map((ip) => ip.trim()).filter(Boolean),
   },

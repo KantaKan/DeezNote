@@ -179,11 +179,15 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
       await localDb.notes.put(local);
       if (reason instanceof ApiError && reason.status === 413) {
         // Over the plan's limit: the server is reachable, the note just can't sync yet. Keep the draft locally.
-        setMessage("Saved on this device. Too large to sync");
+        const planReason = reason.code === "STORAGE_FULL" ? "storage-full" : reason.code === "NOTE_LIMIT_REACHED" ? "note-limit" : "note-too-large";
+        setMessage(planReason === "note-limit" ? "Saved on this device. Note limit reached" : "Saved on this device. Too large to sync");
         if (!sizeWarned.current.has(id)) {
           sizeWarned.current.add(id);
-          setPlanDialog({ reason: reason.code === "STORAGE_FULL" ? "storage-full" : "note-too-large" });
+          setPlanDialog({ reason: planReason });
         }
+      } else if (reason instanceof ApiError && reason.status === 429) {
+        // Rate limited, not offline: the next save retries.
+        setMessage("Saved on this device. Syncing again shortly");
       } else {
         setOnline(false);
         setMessage(local.syncStatus === "conflict" ? "Sync conflict. Your local draft is safe" : "Saved locally. Waiting to sync");

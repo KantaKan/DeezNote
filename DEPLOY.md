@@ -131,6 +131,9 @@ The API now enforces these defaults (adjust environment variables only after con
 | Aggregate request headers | 16 KiB | `API_MAX_HEADER_BYTES` |
 | Individual header value | 8 KiB | `API_MAX_HEADER_VALUE_BYTES` |
 | Active limiter keys | 10,000 | `API_MAX_RATE_LIMIT_KEYS` |
+| Note saves + deletions per authenticated account | 90/minute | `API_NOTE_WRITES_PER_MINUTE` |
+| Note-upload request bytes per authenticated account | 20 MiB/minute | `API_NOTE_UPLOAD_BYTES_PER_MINUTE` |
+| Stored notes per account (Free and Pro) | 1,000 | `API_MAX_NOTES_PER_ACCOUNT` |
 
 Requests exceeding rates receive `429` and `Retry-After`; exhausted hashing capacity returns `503` and
 `Retry-After`. Limits count attempts, including successful logins. Windows expire without blocked requests
@@ -141,7 +144,20 @@ Use a shared limiter/edge protection before scaling to multiple API processes. T
 Bodies are checked against declared length and actual streamed bytes before JSON parsing. Compressed request
 bodies and non-JSON bodies are not supported. URLs are capped at 2,048 bytes. Header checks happen after the HTTP
 server parses headers; transport-level header limits and slow-client protection remain Bun/Caddy's responsibility.
-These request caps are not per-account storage quotas or full validation of encrypted envelopes.
+Per-account note budgets use the authenticated user ID, so changing IP or session does not reset them.
+Valid-schema save/delete attempts consume the write budget even if they later conflict or fail a quota check.
+Upload budgets count actual UTF-8 JSON stream bytes, including metadata and unknown fields, without trusting
+`Content-Length`. Account limits are checked after authentication/parsing; the IP/body protections still
+apply before then. Fixed windows can permit bursts near a window boundary.
+
+Existing Free/Pro ciphertext storage quotas remain in force, now checked atomically with each save using
+an IMMEDIATE SQLite transaction. Stored ciphertext is measured in UTF-8 bytes, not Unicode characters;
+updates replace the old note's usage rather than adding a second copy. Envelope fields are bounded
+(128 characters for the encrypted note key; 64 each for the nonces) to prevent hiding large payloads
+outside the ciphertext quota. They are not full cryptographic validation. Note-count and storage
+violations return `413` with a machine-readable error code; note replacements at the count limit and
+deletions are allowed. Physical database size, logs and SQLite overhead are not included in plan quotas.
+Changing these defaults requires updating the published Terms in both languages to match.
 
 ### Configure Caddy trust before public launch
 

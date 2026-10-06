@@ -14,7 +14,7 @@ export class RateLimiter {
   private readonly entries = new Map<string, { count: number; expiresAt: number }>();
   constructor(private readonly maxKeys: number, private readonly now = Date.now) {}
 
-  check(key: string, limit: number, windowMs: number) {
+  check(key: string, limit: number, windowMs: number, cost = 1) {
     const now = this.now();
     let entry = this.entries.get(key);
     if (entry && entry.expiresAt <= now) {
@@ -33,10 +33,10 @@ export class RateLimiter {
       entry = { count: 0, expiresAt: now + windowMs };
       this.entries.set(key, entry);
     }
-    if (entry.count >= limit) {
+    if (entry.count + cost > limit) {
       throw new RequestProtectionError(429, "Too many requests", Math.max(1, Math.ceil((entry.expiresAt - now) / 1000)));
     }
-    entry.count++;
+    entry.count += cost;
   }
 }
 
@@ -72,6 +72,7 @@ function parseTrustedProxy(entry: string): (ip: string) => boolean {
 export class Security {
   private readonly limiter: RateLimiter;
   private activeHashes = 0;
+  private readonly bodyBytes = new WeakMap<Request, number>();
   private readonly trustedProxies: Array<(ip: string) => boolean>;
   constructor(readonly options: SecurityOptions = config.security, now = Date.now) {
     this.limiter = new RateLimiter(options.maxRateLimitKeys, now);
@@ -124,6 +125,13 @@ export class Security {
     this.limiter.check(`account:${email}`, this.options.loginsPerAccountWindow, 15 * 60_000);
   }
 
+  checkNoteWrite(userId: string, request: Request) {
+    // Account ID, not IP or session token: all devices/sessions share these budgets.
+    this.limiter.check(`note-write:${userId}`, this.options.noteWritesPerMinute, 60_000);
+    const bytes = this.bodyBytes.get(request) ?? 0;
+    if (bytes > 0) this.limiter.check(`note-upload:${userId}`, this.options.noteUploadBytesPerMinute, 60_000, bytes);
+  }
+
   async withPasswordHash<T>(work: () => Promise<T>): Promise<T> {
     if (this.activeHashes >= this.options.maxConcurrentHashes) {
       throw new RequestProtectionError(503, "Authentication is busy; try again shortly", 1);
@@ -152,6 +160,7 @@ export class Security {
         chunks.push(value);
       }
     } finally { reader.releaseLock(); }
+    this.bodyBytes.set(request, total);
     if (total === 0) return {};
     try { return JSON.parse(Buffer.concat(chunks, total).toString("utf8")) as unknown; }
     catch { throw new RequestProtectionError(400, "Invalid JSON"); }
