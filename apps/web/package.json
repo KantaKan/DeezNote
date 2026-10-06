@@ -19,6 +19,7 @@
     "clsx": "2.1.1",
     "dexie": "4.4.6",
     "dompurify": "3.4.16",
+    "fflate": "0.8.3",
     "libsodium-wrappers-sumo": "0.8.4",
     "marked": "18.0.14",
     "react": "19.3.0",

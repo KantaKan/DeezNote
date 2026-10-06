@@ -1,4 +1,5 @@
-import { Crown, Desktop, Moon, SignOut, Sun } from "@phosphor-icons/react";
+import { Crown, Desktop, DownloadSimple, Moon, SignOut, Sun } from "@phosphor-icons/react";
+import { useState } from "react";
 import type { Account } from "../lib/api";
 import type { ThemePreference } from "../lib/theme";
 import { ProPerks, StorageCard } from "./PlanDialog";
@@ -26,12 +27,28 @@ interface Props {
   account: Account | null;
   theme: ThemePreference;
   onThemeChange: (theme: ThemePreference) => void;
+  /** Downloads every open note as Markdown; returns how many were exported and how many stayed locked. */
+  onExport: () => { exported: number; skipped: number };
   onSignOut: () => void;
   onDeleteAccount: () => void;
   onClose: () => void;
 }
 
-export function ProfileDialog({ email, account, theme, onThemeChange, onSignOut, onDeleteAccount, onClose }: Props) {
+export function ProfileDialog({ email, account, theme, onThemeChange, onExport, onSignOut, onDeleteAccount, onClose }: Props) {
+  const [exportResult, setExportResult] = useState<string | null>(null);
+
+  function exportNotes() {
+    try {
+      const { exported, skipped } = onExport();
+      const notes = `${exported} ${exported === 1 ? "note" : "notes"}`;
+      setExportResult(skipped
+        ? `Exported ${notes}. ${skipped} locked ${skipped === 1 ? "note was" : "notes were"} left out: open ${skipped === 1 ? "it" : "them"} with ${skipped === 1 ? "its" : "their"} password first to include ${skipped === 1 ? "it" : "them"}.`
+        : `Exported ${notes}.`);
+    } catch {
+      setExportResult("Export failed. Try again.");
+    }
+  }
+
   return <Dialog onClose={onClose}>{(close) =>
     <div className="p-8 sm:p-10">
       <DialogHeader onClose={close} />
@@ -59,6 +76,13 @@ export function ProfileDialog({ email, account, theme, onThemeChange, onSignOut,
             onClick={() => onThemeChange(id)}
           ><Icon size={15} /> {label}</button>)}
         </div>
+      </div>
+
+      <div className="mt-7">
+        <p className="text-sm font-medium text-neutral-800">Your notes</p>
+        <p className="mt-1 text-sm text-neutral-500">Download a .zip of Markdown files with photos. It's made on this device, so your notes stay private.</p>
+        <button type="button" className="mt-3 inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium text-neutral-800 ring-1 ring-neutral-300 transition hover:bg-neutral-100 active:translate-y-px" onClick={exportNotes}><DownloadSimple size={16} /> Export notes</button>
+        {exportResult && <p role="status" className="mt-2.5 text-sm text-neutral-600">{exportResult}</p>}
       </div>
 
       <footer className="mt-8 flex items-center justify-between gap-4 border-t border-neutral-100 pt-5 text-sm">

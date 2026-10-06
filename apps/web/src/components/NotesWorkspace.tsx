@@ -5,6 +5,7 @@ import { marked } from "marked";
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError, type Account } from "../lib/api";
 import { decryptNote, deriveNoteProtection, destroyKey, encryptNote, LockedNoteError, type NoteProtection } from "../lib/crypto";
+import { buildExportZip, downloadExport } from "../lib/export";
 import { localDb, type LocalNote } from "../lib/db";
 import { noteColorClass } from "../lib/noteColors";
 import { useTheme } from "../lib/theme";
@@ -341,6 +342,16 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
     }
   }
 
+  /** Zips every unlocked note (the open one with its latest unsaved typing) and downloads it. */
+  function exportNotes() {
+    const unlocked = notes.filter((note) => !note.locked);
+    downloadExport(buildExportZip(unlocked.map((note) => ({
+      document: note.encrypted.id === selectedId ? draft : note.document,
+      updatedAt: note.encrypted.updatedAt,
+    }))));
+    return { exported: unlocked.length, skipped: notes.length - unlocked.length };
+  }
+
   async function lockCurrentNote(note: OpenNote) {
     const protection = noteProtections.current.get(note.encrypted.id);
     if (!protection) return;
@@ -554,6 +565,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
       account={account}
       theme={theme.preference}
       onThemeChange={theme.set}
+      onExport={exportNotes}
       onSignOut={onLogout}
       onDeleteAccount={() => { setProfileOpen(false); setDeleteAccountOpen(true); }}
       onClose={() => setProfileOpen(false)}
