@@ -4,6 +4,9 @@ import path from "node:path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+// Public address used for absolute link-preview URLs in index.html (%VITE_SITE_URL%). Set VITE_SITE_URL when the domain changes.
+process.env.VITE_SITE_URL ||= "https://deeznote.103-253-146-20.sslip.io";
+
 export default defineConfig({
   envDir: "../..",
   // The editor (Milkdown/Crepe) ships Vue components; set Vue's build flags so it doesn't warn on every load.

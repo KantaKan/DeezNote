@@ -32,6 +32,8 @@ jobs:
         # Set the VITE_API_URL repository variable if the API isn't served at /api on the same domain.
         env:
           VITE_API_URL: ${{ vars.VITE_API_URL || '/api' }}
+          # Public address for link previews; set the VITE_SITE_URL repository variable when the domain changes.
+          VITE_SITE_URL: ${{ vars.VITE_SITE_URL || 'https://deeznote.103-253-146-20.sslip.io' }}
         run: bunx vite build
 
       - name: Build API

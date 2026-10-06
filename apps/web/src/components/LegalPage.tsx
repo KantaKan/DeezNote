@@ -26,10 +26,11 @@ export function LegalPage({ kind, signedIn }: { kind: LegalKind; signedIn: boole
   const Content = kind === "privacy" ? (lang === "th" ? PrivacyTh : PrivacyEn) : (lang === "th" ? TermsTh : TermsEn);
 
   useEffect(() => {
+    const previousTitle = document.title;
     document.title = `${TITLES[kind][lang]} | DeezNote`;
     document.documentElement.lang = lang;
     return () => {
-      document.title = "DeezNote";
+      document.title = previousTitle;
       document.documentElement.lang = "en";
     };
   }, [kind, lang]);
