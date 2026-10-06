@@ -1,4 +1,4 @@
-import { CloudCheck, Desktop, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, Moon, NotePencil, Password, Plus, ShareNetwork, SignOut, SidebarSimple, Star, Sun, Tag, Trash, UserMinus, WifiSlash, X } from "@phosphor-icons/react";
+import { CloudCheck, List, LockKey, LockSimple, LockSimpleOpen, MagnifyingGlass, NotePencil, Password, Plus, ShareNetwork, SidebarSimple, Star, Tag, Trash, WifiSlash, X } from "@phosphor-icons/react";
 import type { NoteDocument } from "@save-text/shared";
 import DOMPurify from "dompurify";
 import { marked } from "marked";
@@ -12,7 +12,8 @@ import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
 import { NoteColorPicker } from "./NoteColorPicker";
-import { PlanDialog, UsageMeter, type PlanReason } from "./PlanDialog";
+import { PlanDialog, type PlanReason } from "./PlanDialog";
+import { Avatar, ProfileDialog } from "./ProfileDialog";
 import { EmptyState, welcomeNote } from "./Onboarding";
 import { Tour, tourDone, type TourStep } from "./Tour";
 import { ProtectNoteDialog, UnlockNoteCard } from "./NoteLock";
@@ -50,7 +51,7 @@ const TOUR_STEPS: TourStep[] = [
   { target: "new-note", title: "Start a note", body: "Click here, or press the shortcut shown, any time. Notes save on their own as you type." },
   { target: "favourite", title: "Star and colour", body: "Starred notes stay at the top. The palette next to the star gives a note its own page colour." },
   { target: "note-lock", title: "A second lock", body: "Give a sensitive note its own password, on top of your vault passphrase." },
-  { target: "theme", title: "Light, dark and lock", body: "Switch themes here. The lock beside it closes your vault when you step away." },
+  { target: "profile", title: "Your profile", body: "Your plan, storage, theme and sign-out live here. The lock beside it closes your vault when you step away." },
 ];
 
 // The editor saves an image's resize ratio as its alt text (e.g. `![0.62](…)`); apply it in preview too.
@@ -104,7 +105,8 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [account, setAccount] = useState<Account | null>(null);
-  const [planDialog, setPlanDialog] = useState<{ reason?: PlanReason } | null>(null);
+  const [planDialog, setPlanDialog] = useState<{ reason: PlanReason } | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
   // Explain a size rejection once per note, not on every autosave retry.
   const sizeWarned = useRef(new Set<string>());
   const welcomeSeeded = useRef(false);
@@ -431,7 +433,7 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   return <div className="flex h-screen overflow-hidden bg-white text-neutral-950">
     {sidebarOpen && <button className="fixed inset-0 z-20 bg-black/20 backdrop-blur-[1px] md:hidden" aria-label="Close sidebar" onClick={() => setSidebarOpen(false)} />}
     <aside className={`fixed inset-y-0 left-0 z-30 shrink-0 overflow-hidden border-r border-neutral-200 bg-neutral-50 transition-[transform,width] duration-200 md:relative ${sidebarOpen ? "w-[310px] translate-x-0" : "w-[310px] -translate-x-full md:w-0"}`}>
-      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_1fr_auto_auto]">
+      <div className="grid h-full w-[310px] grid-rows-[auto_auto_auto_1fr_auto]">
         <header className="flex h-16 items-center justify-between px-4">
           <div className="flex items-center gap-2.5"><Logo /><strong className="text-[0.9375rem] tracking-[-.01em]">DeezNote</strong></div>
           <Button className="md:hidden" variant="ghost" size="icon-sm" title="Close sidebar" onClick={() => setSidebarOpen(false)}><X size={17} /></Button>
@@ -459,10 +461,14 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
           {!visibleNotes.length && <div className="px-5 py-14 text-center"><NotePencil className="mx-auto mb-3 text-neutral-300" size={30} weight="duotone" /><p className="text-sm font-medium text-neutral-600">{query ? "No matching notes" : "No notes yet"}</p><span className="mt-1 block text-xs leading-5 text-neutral-400">{query ? "Try another search." : "Create a note to start writing."}</span></div>}
         </div>
 
-        {account ? <UsageMeter account={account} onOpen={() => setPlanDialog({})} /> : <div />}
         <footer className="flex h-14 items-center justify-between border-t border-neutral-200 px-3">
           <span className={`flex items-center gap-1.5 text-[0.6875rem] font-medium ${online ? "text-emerald-600" : "text-orange-600"}`}>{online ? <CloudCheck size={15} weight="duotone" /> : <WifiSlash size={15} weight="duotone" />}{online ? "Synced" : "Offline"}</span>
-          <div className="flex"><Button data-tour="theme" variant="ghost" size="icon-sm" title={`Theme: ${theme.preference === "system" ? "System" : theme.preference === "dark" ? "Dark" : "Light"} (click to change)`} onClick={theme.cycle}>{theme.preference === "system" ? <Desktop size={16} /> : theme.preference === "dark" ? <Moon size={16} /> : <Sun size={16} />}</Button><Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button><Button className="hover:bg-red-50 hover:text-red-600" variant="ghost" size="icon-sm" title="Delete account" onClick={() => setDeleteAccountOpen(true)}><UserMinus size={16} /></Button><Button variant="ghost" size="icon-sm" title="Sign out" onClick={onLogout}><SignOut size={16} /></Button></div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon-sm" title="Lock vault" onClick={onLock}><LockKey size={16} /></Button>
+            <button type="button" data-tour="profile" className="grid size-8 place-items-center rounded-full transition hover:ring-2 hover:ring-amber-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400" title="Your profile" onClick={() => setProfileOpen(true)}>
+              <Avatar email={(account?.email ?? localStorage.getItem("save-text-email") ?? "")} className="size-7 text-xs" />
+            </button>
+          </div>
         </footer>
       </div>
     </aside>
@@ -563,6 +569,15 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
     {/* Wait for the first load (and the welcome note) so the tour points at a populated workspace. */}
     {showTour && loaded && (!firstRun || notes.length > 0) && <Tour steps={TOUR_STEPS} onDone={() => setShowTour(false)} />}
     {planDialog && account && <PlanDialog account={account} reason={planDialog.reason} onClose={() => setPlanDialog(null)} />}
+    {profileOpen && <ProfileDialog
+      email={(account?.email ?? localStorage.getItem("save-text-email") ?? "")}
+      account={account}
+      theme={theme.preference}
+      onThemeChange={theme.set}
+      onSignOut={onLogout}
+      onDeleteAccount={() => { setProfileOpen(false); setDeleteAccountOpen(true); }}
+      onClose={() => setProfileOpen(false)}
+    />}
     {deleteAccountOpen && <DeleteAccountDialog onDeleted={onLogout} onClose={() => setDeleteAccountOpen(false)} />}
     {protectDialogOpen && <ProtectNoteDialog noteTitle={draft.title} onSubmit={protectCurrentNote} onClose={() => setProtectDialogOpen(false)} />}
   </div>;

@@ -39,5 +39,5 @@ export function useTheme() {
     return () => media.removeEventListener("change", onChange);
   }, [preference]);
 
-  return { preference, cycle: () => setPreference((current) => NEXT[current]) };
+  return { preference, set: setPreference, cycle: () => setPreference((current) => NEXT[current]) };
 }

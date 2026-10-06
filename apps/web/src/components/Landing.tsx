@@ -1,5 +1,5 @@
-import { ArrowDown, ArrowRight, Code, Key, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { ArrowDown, ArrowRight, Check, Code, Crown, Key, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { REPO_URL } from "../legal/policy";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
@@ -49,6 +49,77 @@ function useReveal() {
   return rootRef;
 }
 
+// Pro pricing. Thai visitors see baht; everyone else sees US dollars.
+const PRICES = {
+  thb: { monthly: "฿79", yearly: "฿490", yearlyAsMonthly: "฿41", save: "48%" },
+  usd: { monthly: "$2.99", yearly: "$17.99", yearlyAsMonthly: "$1.50", save: "50%" },
+} as const;
+
+function localPrices() {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return zone === "Asia/Bangkok" || navigator.language.toLowerCase().startsWith("th") ? PRICES.thb : PRICES.usd;
+}
+
+function Feature({ children, inverted = false }: { children: ReactNode; inverted?: boolean }) {
+  return <li className="flex gap-2.5"><Check size={16} weight="bold" className={`mt-1 shrink-0 ${inverted ? "text-amber-400" : "text-amber-600"}`} />{children}</li>;
+}
+
+function Pricing() {
+  const [yearly, setYearly] = useState(true);
+  const prices = localPrices();
+
+  return <section id="pricing" className="mx-auto max-w-6xl scroll-mt-20 px-5 pb-20 sm:px-8 lg:pb-28">
+    <div data-reveal className="flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
+      <div>
+        <h2 className="text-balance text-3xl font-bold tracking-[-.035em] sm:text-4xl">Free to start. Pro when you need room.</h2>
+        <p className="mt-4 max-w-[52ch] text-lg leading-relaxed text-neutral-600">Both plans get the same encryption. Pro adds space for photos.</p>
+      </div>
+      <div className="flex rounded-lg bg-neutral-100 p-1 text-sm" role="radiogroup" aria-label="Billing period">
+        {[{ value: true, label: "Yearly" }, { value: false, label: "Monthly" }].map(({ value, label }) => <button
+          key={label}
+          type="button"
+          role="radio"
+          aria-checked={yearly === value}
+          className={`flex items-center gap-2 rounded-md px-3.5 py-1.5 font-medium transition ${yearly === value ? "bg-white text-neutral-900 shadow-sm" : "text-neutral-500 hover:text-neutral-800"}`}
+          onClick={() => setYearly(value)}
+        >{label}{value && <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[0.6875rem] font-semibold text-amber-800">Save {prices.save}</span>}</button>)}
+      </div>
+    </div>
+
+    <div className="mt-12 grid gap-4 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+      <article data-reveal className="flex flex-col rounded-2xl bg-neutral-50 p-7 ring-1 ring-neutral-900/[.07] sm:p-8">
+        <h3 className="text-lg font-semibold tracking-tight">Free</h3>
+        <p className="mt-4 flex items-baseline gap-1.5"><span className="text-4xl font-bold tracking-[-.04em]">{prices === PRICES.thb ? "฿0" : "$0"}</span><span className="text-neutral-500">forever</span></p>
+        <ul className="mt-7 grid gap-3 text-[0.9375rem] text-neutral-700">
+          <Feature>End-to-end encryption on every note</Feature>
+          <Feature>Works offline, syncs across your devices</Feature>
+          <Feature>Note passwords, colours and favourites</Feature>
+          <Feature>256 KB per note, 25 MB in total</Feature>
+        </ul>
+        <a {...linkProps("/signup")} className={`${secondaryButton} mt-8 self-start`}>Create account</a>
+      </article>
+
+      <article data-reveal className={`flex flex-col rounded-2xl bg-neutral-900 p-7 text-neutral-50 sm:p-8 ${panelShadow}`}>
+        <div className="flex items-center justify-between gap-4">
+          <h3 className="flex items-center gap-2 text-lg font-semibold tracking-tight"><Crown size={18} weight="duotone" className="text-amber-400" /> Pro</h3>
+          <span className="rounded-full bg-white/10 px-2.5 py-1 text-xs font-medium text-neutral-300">Coming soon</span>
+        </div>
+        <p className="mt-4 flex items-baseline gap-1.5">
+          <span className="text-4xl font-bold tracking-[-.04em]">{yearly ? prices.yearly : prices.monthly}</span>
+          <span className="text-neutral-400">{yearly ? "per year" : "per month"}</span>
+        </p>
+        <p className="mt-1.5 text-sm text-neutral-400">{yearly ? `That's ${prices.yearlyAsMonthly} a month, billed once a year.` : `Or ${prices.yearly} a year and save ${prices.save}.`}</p>
+        <ul className="mt-7 grid gap-3 text-[0.9375rem] text-neutral-200">
+          <Feature inverted>Everything in Free</Feature>
+          <Feature inverted>Notes up to 8 MB, with room for photos</Feature>
+          <Feature inverted>1 GB of encrypted storage</Feature>
+          <Feature inverted>Supports an independent, open-source app</Feature>
+        </ul>
+      </article>
+    </div>
+  </section>;
+}
+
 function BentoCell({ title, body, className = "", children }: { title: string; body: string; className?: string; children?: ReactNode }) {
   return <article data-reveal className={`flex flex-col overflow-hidden rounded-2xl ring-1 ring-neutral-900/[.07] ${className}`}>
     <div className="p-6 sm:p-7">
@@ -66,6 +137,7 @@ export function Landing() {
     <header className="mx-auto flex h-16 max-w-6xl items-center justify-between px-5 sm:px-8">
       <a {...linkProps("/")} className="flex items-center gap-2.5 text-[0.9375rem] font-semibold tracking-[-.01em]"><Logo /> DeezNote</a>
       <nav className="flex items-center gap-1.5 sm:gap-2">
+        <a href="#pricing" className="hidden rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950 sm:block">Pricing</a>
         <a {...linkProps("/login")} className="rounded-lg px-3 py-2 text-sm font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950">Sign in</a>
         <a {...linkProps("/signup")} className={`${primaryButton} h-9 px-4`}>Create account</a>
       </nav>
@@ -154,6 +226,8 @@ export function Landing() {
           </BentoCell>
         </div>
       </section>
+
+      <Pricing />
 
       {/* The honest trade-off: the limitation is the privacy promise, plus what that means for you. */}
       <section className="border-y border-neutral-200 bg-neutral-50">
