@@ -14,11 +14,6 @@ export async function storedBytes(userId: string, exceptNoteId?: string) {
   return Number(row?.bytes ?? 0);
 }
 
-export async function planOf(userId: string): Promise<Plan> {
-  const [user] = await db.select({ plan: users.plan }).from(users).where(eq(users.id, userId)).limit(1);
-  return user?.plan ?? "free";
-}
-
 /** Why a save would break the user's plan limits, or null when it fits. */
 export function storageProblemInTransaction(
   database: Pick<typeof db, "select">,
@@ -45,9 +40,4 @@ export function storageProblemInTransaction(
     return { status: 413, code: "STORAGE_FULL", error: "Your storage is full", plan, limitBytes: limits.totalBytes };
   }
   return null;
-}
-
-/** Non-transactional preflight only; note routes check again inside the write transaction. */
-export async function storageProblem(userId: string, noteId: string, noteBytes: number) {
-  return storageProblemInTransaction(db, userId, noteId, noteBytes, config.security.maxNotesPerAccount);
 }

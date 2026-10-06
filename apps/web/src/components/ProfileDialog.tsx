@@ -15,7 +15,7 @@ export function Avatar({ email, className = "" }: { email: string; className?: s
   return <span aria-hidden="true" className={`grid shrink-0 place-items-center rounded-full bg-amber-400 font-semibold uppercase text-amber-950 ${className}`}>{email.slice(0, 1) || "?"}</span>;
 }
 
-export function PlanBadge({ plan }: { plan: Account["plan"] }) {
+function PlanBadge({ plan }: { plan: Account["plan"] }) {
   return plan === "pro"
     ? <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800"><Crown size={12} weight="fill" /> Pro</span>
     : <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-medium text-neutral-600">Free</span>;

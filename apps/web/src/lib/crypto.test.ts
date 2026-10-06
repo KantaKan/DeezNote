@@ -8,7 +8,6 @@ import {
   encryptNote,
   LockedNoteError,
   unlockVault,
-  type NoteProtection,
 } from "./crypto";
 
 const vaultPassphrase = "correct horse battery staple";
