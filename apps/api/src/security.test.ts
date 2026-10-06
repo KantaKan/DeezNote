@@ -212,6 +212,18 @@ describe("limiter and proxy trust", () => {
 });
 
 describe("sessions and sign-in hardening", () => {
+  test("rate-limit errors carry CORS headers for the web app only", async () => {
+    const { request } = setup({ authPerMinute: 1 });
+    const init = (origin: string) => ({ ...json({ email: "a@example.com", password: "long-enough-password" }), headers: { "Content-Type": "application/json", Origin: origin } });
+    await request("/auth/login", init(config.webOrigin));
+    const limited = await request("/auth/login", init(config.webOrigin));
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get("access-control-allow-origin")).toBe(config.webOrigin);
+    const other = await request("/auth/login", init("https://evil.example"));
+    expect(other.status).toBe(429);
+    expect(other.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
   test("groups IPv6 clients by /64 and leaves IPv4 alone", () => {
     expect(rateLimitKey("203.0.113.5")).toBe("203.0.113.5");
     expect(rateLimitKey("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1:2::/64");
