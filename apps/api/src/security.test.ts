@@ -219,6 +219,12 @@ describe("sessions and sign-in hardening", () => {
     const limited = await request("/auth/login", init(config.webOrigin));
     expect(limited.status).toBe(429);
     expect(limited.headers.get("access-control-allow-origin")).toBe(config.webOrigin);
+    // Exactly one value on every kind of error: a repeated header breaks CORS in browsers.
+    const invalid = await setup().request("/auth/login", { ...init(config.webOrigin), body: JSON.stringify({ email: "bad" }) });
+    expect(invalid.status).toBe(400);
+    expect(invalid.headers.get("access-control-allow-origin")).toBe(config.webOrigin);
+    const missing = await setup().request("/nope", { headers: { Origin: config.webOrigin } });
+    expect(missing.headers.get("access-control-allow-origin")).toBe(config.webOrigin);
     const other = await request("/auth/login", init("https://evil.example"));
     expect(other.status).toBe(429);
     expect(other.headers.get("access-control-allow-origin")).toBeNull();

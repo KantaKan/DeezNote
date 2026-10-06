@@ -23,16 +23,16 @@ export function createApp(security = new Security()) {
   .onParse(({ request }, contentType) => security.parseJson(request, contentType))
   .use(cors({ origin: config.webOrigin }))
   .onError(({ code, error, request, set }) => {
-    // Errors thrown before the CORS plugin runs (rate limits, size limits) still need the header,
-    // or the browser hides the real reason and the app can only say "Failed to fetch".
-    if (request.headers.get("origin") === config.webOrigin) {
-      set.headers["Access-Control-Allow-Origin"] = config.webOrigin;
-      set.headers.Vary = "Origin";
-    }
     // Elysia wraps errors thrown by onParse in ParseError.
     const protectionError = error instanceof RequestProtectionError ? error
       : "cause" in error && error.cause instanceof RequestProtectionError ? error.cause : null;
     if (protectionError) {
+      // Thrown in onRequest, before the CORS plugin adds its headers: without this the browser hides
+      // the real reason (e.g. "Too many requests") and the app can only say "Failed to fetch".
+      if (request.headers.get("origin") === config.webOrigin) {
+        set.headers["Access-Control-Allow-Origin"] = config.webOrigin;
+        set.headers.Vary = "Origin";
+      }
       set.status = protectionError.status;
       if (protectionError.retryAfter !== undefined) set.headers["Retry-After"] = String(protectionError.retryAfter);
       return { error: protectionError.message };
