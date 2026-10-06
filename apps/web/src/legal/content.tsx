@@ -85,13 +85,13 @@ export function PrivacyEn() {
         <li>Account, vault and notes: until you delete a note or your account.</li>
         <li>Sessions: until you sign out or they expire after 30 days.</li>
         <li>Access logs: 100 days, then deleted automatically.</li>
-        <li>We don't currently keep separate backups, so deleted data is gone for good.</li>
+        <li>Backups: a copy of the server database is made every day and kept for 14 days, then deleted automatically. It holds the same data listed above, and your notes stay encrypted in it. Anything you delete is gone from the backups within 14 days.</li>
       </List>
     </Section>
     <Section title="Your rights">
       <p>Under the PDPA you can ask to access, correct, move or delete your personal data, object to or restrict its processing, and complain to Thailand's Personal Data Protection Committee.</p>
       <List>
-        <li><strong>Delete everything yourself:</strong> in the app, use the delete-account button at the bottom of the sidebar. It removes your account, vault, notes and sessions immediately. Access logs stay for their 100-day legal period.</li>
+        <li><strong>Delete everything yourself:</strong> in the app, open your profile and choose Delete account. It removes your account, vault, notes and sessions from the live database immediately, and from backups within 14 days. Access logs stay for their 100-day legal period.</li>
         <li><strong>Get or fix your data:</strong> your notes are readable in the app. To change your email or ask what we hold, open a <Issues>GitHub issue</Issues> without putting any personal details in it, and we'll reply with a private way to verify you.</li>
       </List>
     </Section>
@@ -149,13 +149,13 @@ export function PrivacyTh() {
         <li>บัญชี คลัง และโน้ต: จนกว่าคุณจะลบโน้ตหรือลบบัญชี</li>
         <li>เซสชัน: จนกว่าคุณจะออกจากระบบ หรือหมดอายุเมื่อครบ 30 วัน</li>
         <li>ข้อมูลจราจรทางคอมพิวเตอร์: 100 วัน แล้วลบโดยอัตโนมัติ</li>
-        <li>ขณะนี้เราไม่มีการสำรองข้อมูลแยกต่างหาก ข้อมูลที่ถูกลบจึงหายไปอย่างถาวร</li>
+        <li>การสำรองข้อมูล: เราทำสำเนาฐานข้อมูลของเซิร์ฟเวอร์ทุกวันและเก็บไว้ 14 วัน จากนั้นจะถูกลบโดยอัตโนมัติ สำเนานี้มีข้อมูลชุดเดียวกับที่ระบุไว้ข้างต้น และโน้ตของคุณยังคงถูกเข้ารหัสอยู่ ข้อมูลที่คุณลบจะหายไปจากสำเนาสำรองภายใน 14 วัน</li>
       </List>
     </Section>
     <Section title="สิทธิของคุณ">
       <p>ตาม PDPA คุณมีสิทธิขอเข้าถึง แก้ไข โอนย้าย หรือลบข้อมูลส่วนบุคคลของคุณ คัดค้านหรือขอให้ระงับการประมวลผล และร้องเรียนต่อคณะกรรมการคุ้มครองข้อมูลส่วนบุคคล</p>
       <List>
-        <li><strong>ลบทุกอย่างด้วยตัวเอง:</strong> ในแอป ใช้ปุ่มลบบัญชีที่ด้านล่างของแถบด้านข้าง ระบบจะลบบัญชี คลัง โน้ต และเซสชันของคุณทันที ส่วนข้อมูลจราจรทางคอมพิวเตอร์จะถูกเก็บไว้จนครบ 100 วันตามที่กฎหมายกำหนด</li>
+        <li><strong>ลบทุกอย่างด้วยตัวเอง:</strong> ในแอป เปิดโปรไฟล์ของคุณแล้วเลือก Delete account ระบบจะลบบัญชี คลัง โน้ต และเซสชันของคุณออกจากฐานข้อมูลที่ใช้งานอยู่ทันที และออกจากสำเนาสำรองภายใน 14 วัน ส่วนข้อมูลจราจรทางคอมพิวเตอร์จะถูกเก็บไว้จนครบ 100 วันตามที่กฎหมายกำหนด</li>
         <li><strong>ขอดูหรือแก้ไขข้อมูล:</strong> คุณอ่านโน้ตของตัวเองได้ในแอป หากต้องการเปลี่ยนอีเมลหรือสอบถามว่าเราเก็บข้อมูลอะไรไว้ โปรดเปิด <Issues>GitHub issue</Issues> โดยไม่ใส่ข้อมูลส่วนบุคคลใดๆ แล้วเราจะตอบกลับพร้อมช่องทางส่วนตัวสำหรับยืนยันตัวตน</li>
       </List>
     </Section>

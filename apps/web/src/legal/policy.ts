@@ -4,7 +4,7 @@
 // shares (see POLICY_SENSITIVE_PATHS). policy.test.ts fails when any of them changes, until someone has
 // re-read /privacy and /terms, updated them if needed, bumped LAST_UPDATED and pasted the new fingerprint.
 export const LAST_UPDATED = "2026-10-06";
-export const REVIEWED_FINGERPRINT = "76613d2c6c118630";
+export const REVIEWED_FINGERPRINT = "a0c5a5d62bd194a7";
 
 export const REPO_URL = "https://github.com/KantaKan/DeezNote";
 export const ISSUES_URL = `${REPO_URL}/issues`;
@@ -23,4 +23,5 @@ export const POLICY_SENSITIVE_PATHS = [
   "apps/web/index.html",
   "packages/shared/src/index.ts",
   "deploy/setup-server.sh",
+  "deploy/install-backups.sh",
 ];
