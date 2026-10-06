@@ -132,6 +132,30 @@ describe("note encryption", () => {
     await destroyKey(protection.key);
   });
 
+  test("binds each note to its ID so the server can't swap notes", async () => {
+    const first = await encryptNote(crypto.randomUUID(), { title: "First", markdown: "one", tags: [] }, vaultKey, 0);
+    const second = await encryptNote(crypto.randomUUID(), { title: "Second", markdown: "two", tags: [] }, vaultKey, 0);
+
+    // Whole envelope moved under another ID, or just the content swapped: both must fail.
+    await expect(decryptNote({ ...first, id: second.id }, vaultKey)).rejects.toThrow();
+    await expect(decryptNote({ ...second, encryptedContent: first.encryptedContent, contentNonce: first.contentNonce }, vaultKey)).rejects.toThrow();
+    expect((await decryptNote(second, vaultKey)).title).toBe("Second");
+  });
+
+  test("still opens notes saved before ID binding", async () => {
+    const sodium = (await import("libsodium-wrappers-sumo")).default;
+    await sodium.ready;
+    const b64 = (bytes: Uint8Array) => sodium.to_base64(bytes, sodium.base64_variants.ORIGINAL);
+    const noteKey = sodium.randombytes_buf(32);
+    const contentNonce = sodium.randombytes_buf(24);
+    const keyNonce = sodium.randombytes_buf(24);
+    const content = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(JSON.stringify({ title: "Old", markdown: "legacy", tags: [] }), null, null, contentNonce, noteKey);
+    const wrapped = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(noteKey, null, null, keyNonce, vaultKey);
+    const legacy = { id: crypto.randomUUID(), encryptedContent: b64(content), encryptedNoteKey: b64(wrapped), contentNonce: b64(contentNonce), keyNonce: b64(keyNonce), version: 1, updatedAt: new Date().toISOString() };
+
+    expect(await decryptNote(legacy, vaultKey)).toEqual({ title: "Old", markdown: "legacy", tags: [] });
+  });
+
   test("normalizes old notes that were saved before tags existed", async () => {
     const legacy = { title: "Old note", markdown: "Still readable" } as NoteDocument;
     const encrypted = await encryptNote(crypto.randomUUID(), legacy, vaultKey, 0);

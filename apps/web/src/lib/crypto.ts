@@ -58,14 +58,23 @@ async function derivePassphraseKey(passphrase: string, salt: Uint8Array) {
   );
 }
 
-function seal(message: Uint8Array, key: Uint8Array) {
+function seal(message: Uint8Array, key: Uint8Array, additionalData: Uint8Array | null = null) {
   const nonce = sodium.randombytes_buf(sodium.crypto_aead_xchacha20poly1305_ietf_NPUBBYTES);
-  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(message, null, null, nonce, key);
+  const ciphertext = sodium.crypto_aead_xchacha20poly1305_ietf_encrypt(message, additionalData, null, nonce, key);
   return { ciphertext, nonce };
 }
 
-function open(ciphertext: Uint8Array, nonce: Uint8Array, key: Uint8Array) {
-  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, null, nonce, key);
+function open(ciphertext: Uint8Array, nonce: Uint8Array, key: Uint8Array, additionalData: Uint8Array | null = null) {
+  return sodium.crypto_aead_xchacha20poly1305_ietf_decrypt(null, ciphertext, additionalData, nonce, key);
+}
+
+/**
+ * Authenticated data binding a note's key and content to its ID, so a server can't swap one note's
+ * ciphertext into another. Notes saved before this (no binding) still open and upgrade on their next save;
+ * a bound note never opens without its ID, so it can't be downgraded.
+ */
+function noteBinding(id: string) {
+  return new TextEncoder().encode(`deeznote-note-v2:${id}`);
 }
 
 function normalizeDocument(value: unknown): NoteDocument {
@@ -144,8 +153,9 @@ export async function encryptNote(
     };
   }
 
-  const sealedContent = seal(new TextEncoder().encode(JSON.stringify(payload)), noteKey);
-  const wrappedKey = seal(noteKey, vaultKey);
+  const binding = noteBinding(id);
+  const sealedContent = seal(new TextEncoder().encode(JSON.stringify(payload)), noteKey, binding);
+  const wrappedKey = seal(noteKey, vaultKey, binding);
   s.memzero(noteKey);
 
   return {
@@ -166,9 +176,17 @@ export async function decryptNote(
   protection?: NoteProtection,
 ): Promise<NoteDocument> {
   const s = await ready();
-  const noteKey = open(decode(note.encryptedNoteKey), decode(note.keyNonce), vaultKey);
+  // Bound (current) format first; fall back to the unbound format of older notes.
+  let binding: Uint8Array | null = noteBinding(note.id);
+  let noteKey: Uint8Array;
   try {
-    const plaintext = open(decode(note.encryptedContent), decode(note.contentNonce), noteKey);
+    noteKey = open(decode(note.encryptedNoteKey), decode(note.keyNonce), vaultKey, binding);
+  } catch {
+    binding = null;
+    noteKey = open(decode(note.encryptedNoteKey), decode(note.keyNonce), vaultKey);
+  }
+  try {
+    const plaintext = open(decode(note.encryptedContent), decode(note.contentNonce), noteKey, binding);
     const payload = JSON.parse(new TextDecoder().decode(plaintext)) as unknown;
     if (!isProtectedPayload(payload)) return normalizeDocument(payload);
     if (!protection || protection.salt !== payload.salt) {
