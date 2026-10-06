@@ -75,39 +75,29 @@ function Feature({ children, inverted = false }: { children: ReactNode; inverted
   return <li className="flex gap-2.5"><Check size={16} weight="bold" className={`mt-1 shrink-0 ${inverted ? "text-amber-400" : "text-amber-600"}`} />{children}</li>;
 }
 
-/** Drag the years; see what paying monthly vs yearly costs and what yearly keeps in your pocket. */
-function SavingsCalculator({ plan }: { plan: PlanPrices }) {
-  const [years, setYears] = useState(3);
-  const monthlyTotal = plan.monthly * 12 * years;
-  const yearlyTotal = plan.yearly * years;
-  const saved = monthlyTotal - yearlyTotal;
-  const freeMonths = Math.floor(saved / plan.monthly);
+/** A year of Pro as 12 month tiles: the paid ones, then the ones yearly gives you free. */
+function YearlyValue({ plan }: { plan: PlanPrices }) {
+  const freeExact = 12 - plan.yearly / plan.monthly;
+  const freeTiles = Math.round(freeExact);
+  const freeLabel = freeExact < freeTiles ? `almost ${freeTiles}` : `${freeTiles}`;
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-  return <div data-reveal className="mt-14 grid gap-10 border-t border-neutral-200 pt-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-16">
-    <div>
-      <h3 className="text-2xl font-bold tracking-[-.03em] sm:text-3xl">See what yearly saves you</h3>
-      <p className="mt-2 text-[0.9375rem] leading-relaxed text-neutral-600">Drag to how long you'd keep Pro.</p>
-      <label className="mt-7 block">
-        <span className="flex items-baseline justify-between text-sm">
-          <span className="font-medium text-neutral-800">Years of Pro</span>
-          <span className="text-2xl font-bold tabular-nums tracking-tight">{years}</span>
-        </span>
-        <input type="range" min={1} max={5} step={1} value={years} onChange={(event) => setYears(Number(event.target.value))} className="savings-range mt-4 w-full" style={{ "--fill": `${((years - 1) / 4) * 100}%` } as CSSProperties} aria-valuetext={`${years} ${years === 1 ? "year" : "years"}`} />
-        <span className="mt-1 flex justify-between px-1 text-xs tabular-nums text-neutral-400" aria-hidden="true">{[1, 2, 3, 4, 5].map((n) => <span key={n}>{n}</span>)}</span>
-      </label>
-    </div>
-
-    <div role="status" aria-live="polite">
-      <dl className="grid gap-3 text-[0.9375rem]">
-        <div className="flex items-baseline justify-between gap-4"><dt className="text-neutral-600">Paying monthly</dt><dd className="tabular-nums text-neutral-500 line-through decoration-neutral-400/70">{money(monthlyTotal, plan)}</dd></div>
-        <div className="flex items-baseline justify-between gap-4"><dt className="text-neutral-600">Paying yearly</dt><dd className="font-medium tabular-nums text-neutral-900">{money(yearlyTotal, plan)}</dd></div>
-      </dl>
-      <div className="mt-5 border-t border-neutral-200 pt-5">
-        <p className="text-sm font-medium text-neutral-600">You save</p>
-        <p className="mt-1 text-5xl font-bold tabular-nums tracking-[-.04em] text-amber-600">{money(saved, plan)}</p>
-        <p className="mt-2 text-sm text-neutral-500">That's {freeMonths} months of Pro, free.</p>
-      </div>
-    </div>
+  return <div data-reveal className="year-tiles mt-14 border-t border-neutral-200 pt-12">
+    <h3 className="max-w-[24ch] text-balance text-2xl font-bold tracking-[-.03em] sm:text-3xl">Pay yearly and {freeLabel} months are on us.</h3>
+    <ol className="mt-8 grid grid-cols-6 gap-2 sm:grid-cols-12" aria-label={`${12 - freeTiles} months paid, ${freeTiles} months free`}>
+      {months.map((month, index) => {
+        const free = index >= 12 - freeTiles;
+        return <li key={month} style={{ "--i": index } as CSSProperties} className={`year-tile flex aspect-[3/4] flex-col justify-between rounded-xl p-2.5 text-xs font-medium sm:p-3 ${free ? "bg-amber-400 text-amber-950 dark:bg-amber-600 dark:text-amber-50" : "bg-neutral-100 text-neutral-500"}`}>
+          <span>{month}</span>
+          <span className={free ? "font-semibold" : "text-neutral-400"}>{free ? "Free" : "Paid"}</span>
+        </li>;
+      })}
+    </ol>
+    <dl className="mt-6 flex flex-wrap gap-x-10 gap-y-2 text-[0.9375rem]">
+      <div className="flex gap-2"><dt className="text-neutral-500">A year, paying monthly</dt><dd className="tabular-nums text-neutral-500 line-through decoration-neutral-400/70">{money(plan.monthly * 12, plan)}</dd></div>
+      <div className="flex gap-2"><dt className="text-neutral-600">A year, paying yearly</dt><dd className="font-semibold tabular-nums text-neutral-900">{money(plan.yearly, plan)}</dd></div>
+      <div className="flex gap-2"><dt className="text-neutral-600">You keep</dt><dd className="font-semibold tabular-nums text-amber-700">{money(plan.monthly * 12 - plan.yearly, plan)}</dd></div>
+    </dl>
   </div>;
 }
 
@@ -172,7 +162,7 @@ function Pricing() {
       </article>
     </div>
 
-    <SavingsCalculator plan={plan} />
+    <YearlyValue plan={plan} />
   </section>;
 }
 
