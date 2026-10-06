@@ -1,8 +1,10 @@
-import { ArrowDown, ArrowRight, Check, Code, Crown, Key, MarkdownLogo, WifiSlash } from "@phosphor-icons/react";
+import { ArrowDown, ArrowRight, Check, Code, Crown, Key, List, MarkdownLogo, Star, WifiSlash } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { REPO_URL } from "../legal/policy";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
+import { NoteCard, NoteSectionLabel } from "./NoteCard";
+import { NoteColorSwatches } from "./NoteColorPicker";
 
 // Public front door. Light and dark come from the same palette tokens as the app (styles.css),
 // so every class here works in both themes. Shape system: buttons rounded-lg, panels and images rounded-2xl.
@@ -120,6 +122,50 @@ function Pricing() {
   </section>;
 }
 
+// Sample notes for the live sidebar preview: the real NoteCard component, not a screenshot.
+const PREVIEW_NOTES = [
+  { id: "skye", title: "Skye, late September", excerpt: "Walk the Quiraing loop before 9, while the car park still has space.", tags: ["travel"], favorite: true, color: "blue", dateLabel: "Oct 6" },
+  { id: "reading", title: "Reading list", excerpt: "Piranesi, The Dispossessed, Tomorrow and Tomorrow and Tomorrow", tags: ["books"], favorite: true, dateLabel: "Oct 5" },
+  { id: "session", title: "Session notes", excerpt: "", tags: ["private"], color: "purple", locked: true, dateLabel: "Oct 4" },
+  { id: "budget", title: "Q4 budget draft", excerpt: "Hosting stays flat. Move the design contract to January.", tags: ["work"], color: "yellow", dateLabel: "Oct 3" },
+  { id: "miso", title: "Miso aubergine", excerpt: "Score deeply, roast at 220°C, glaze with white miso and mirin.", tags: ["recipes"], color: "green", dateLabel: "Oct 1" },
+];
+
+function LiveNoteList() {
+  const [favourites, setFavourites] = useState(() => new Set(PREVIEW_NOTES.filter((note) => note.favorite).map((note) => note.id)));
+  const toggle = (id: string) => setFavourites((current) => {
+    const next = new Set(current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const card = (note: (typeof PREVIEW_NOTES)[number]) => <NoteCard key={note.id} {...note} favorite={favourites.has(note.id)} statusLabel="Saved" onToggleFavorite={() => toggle(note.id)} />;
+  const starred = PREVIEW_NOTES.filter((note) => favourites.has(note.id));
+  const others = PREVIEW_NOTES.filter((note) => !favourites.has(note.id));
+
+  return <div className="mx-4 mt-auto rounded-t-2xl bg-white px-2 pt-3 ring-1 ring-neutral-900/[.06] [mask-image:linear-gradient(to_bottom,black_80%,transparent)] dark:bg-neutral-50 sm:mx-6">
+    {starred.length > 0 && <div className="mb-3">
+      <NoteSectionLabel icon={<Star size={13} weight="fill" className="text-amber-500" />} label="Favourites" count={starred.length} />
+      {starred.map(card)}
+    </div>}
+    <NoteSectionLabel icon={<List size={13} weight="bold" />} label={starred.length ? "Other notes" : "All notes"} count={others.length} />
+    {others.map(card)}
+  </div>;
+}
+
+/** Live colour demo: the app's real swatches recolour a real note card. */
+function LiveColourPicker() {
+  const [color, setColor] = useState<string | undefined>("blue");
+  return <div className="grid w-full gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+    <div className="pointer-events-none" aria-hidden="true">
+      <NoteCard title="Skye, late September" excerpt="Walk the Quiraing loop before 9, while the car park still has space." tags={["travel"]} favorite color={color} dateLabel="Oct 6" statusLabel="Saved" selected />
+    </div>
+    <div className="rounded-2xl bg-white p-3 ring-1 ring-neutral-900/[.06] dark:bg-neutral-50">
+      <p className="px-1 pb-2.5 text-[0.6875rem] font-medium text-neutral-500">Page colour</p>
+      <NoteColorSwatches value={color} onChange={setColor} />
+    </div>
+  </div>;
+}
+
 function BentoCell({ title, body, className = "", children }: { title: string; body: string; className?: string; children?: ReactNode }) {
   return <article data-reveal className={`flex flex-col overflow-hidden rounded-2xl ring-1 ring-neutral-900/[.07] ${className}`}>
     <div className="p-6 sm:p-7">
@@ -205,10 +251,8 @@ export function Landing() {
             </div>
           </BentoCell>
 
-          <BentoCell className="bg-neutral-50 md:col-span-2 md:row-span-2" title="Colour and star what matters" body="Favourites stay at the top. A page colour makes a note easy to spot.">
-            <div className="mt-auto px-6">
-              <Shot name="sidebar" width={465} height={915} alt="The notes sidebar with favourites and coloured notes." className="h-auto w-full rounded-t-2xl ring-1 ring-neutral-900/[.06]" />
-            </div>
+          <BentoCell className="bg-neutral-50 md:col-span-2 md:row-span-2" title="Colour and star what matters" body="Favourites stay at the top. A page colour makes a note easy to spot. Try a star.">
+            <LiveNoteList />
           </BentoCell>
 
           <BentoCell className="bg-amber-50 dark:bg-amber-50/45 md:col-span-2" title="Works offline" body="Keep writing on a plane. Changes sync when you're back, still encrypted.">
@@ -220,8 +264,8 @@ export function Landing() {
           </BentoCell>
 
           <BentoCell className="bg-neutral-50 md:col-span-6 md:flex-row md:items-end" title="Pick a colour for every page" body="Ten page colours, in light and dark. Dark mode follows your system unless you pick one.">
-            <div className="mt-2 px-6 pb-6 md:ml-auto md:mt-0 md:p-7">
-              <Shot name="colours" width={348} height={198} alt="The page colour picker with ten swatches." className={`h-auto w-full max-w-[22rem] rounded-2xl ring-1 ring-neutral-900/[.06] ${panelShadow}`} />
+            <div className="mt-2 px-6 pb-6 md:ml-auto md:mt-0 md:w-[34rem] md:p-7">
+              <LiveColourPicker />
             </div>
           </BentoCell>
         </div>

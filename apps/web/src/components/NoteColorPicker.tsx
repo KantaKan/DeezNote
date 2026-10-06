@@ -51,15 +51,21 @@ export function NoteColorPicker({ value, disabled, onChange }: Props) {
 
     {open && <div className="absolute right-0 top-10 z-40 w-[232px] rounded-2xl border border-neutral-200 bg-white p-3 shadow-[0_16px_48px_-16px_rgba(0,0,0,.3)]" role="menu">
       <p className="px-1 pb-2.5 text-[0.6875rem] font-medium text-neutral-500">Page colour</p>
-      <div className="grid grid-cols-5 gap-2">
-        <Swatch label="Default" selected={!current} onClick={() => choose(undefined)}>
-          <span className="size-full rounded-full border border-neutral-300 bg-white" />
-        </Swatch>
-        {NOTE_COLORS.map((option) => <Swatch key={option.id} label={option.label} selected={current?.id === option.id} onClick={() => choose(option.id)}>
-          <span className="size-full rounded-full" style={{ background: option.swatch }} />
-        </Swatch>)}
-      </div>
+      <NoteColorSwatches value={value} onChange={choose} />
     </div>}
+  </div>;
+}
+
+/** The ten page-colour swatches. Used by the toolbar picker and the landing page's live demo. */
+export function NoteColorSwatches({ value, onChange }: { value: string | undefined; onChange: (color: string | undefined) => void }) {
+  const current = NOTE_COLORS.find((option) => option.id === value);
+  return <div className="grid grid-cols-5 gap-2">
+    <Swatch label="Default" selected={!current} onClick={() => onChange(undefined)}>
+      <span className="size-full rounded-full border border-neutral-300 bg-white" />
+    </Swatch>
+    {NOTE_COLORS.map((option) => <Swatch key={option.id} label={option.label} selected={current?.id === option.id} onClick={() => onChange(option.id)}>
+      <span className="size-full rounded-full" style={{ background: option.swatch }} />
+    </Swatch>)}
   </div>;
 }
 

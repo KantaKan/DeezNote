@@ -11,6 +11,7 @@ import { useTheme } from "../lib/theme";
 import { DeleteAccountDialog } from "./DeleteAccountDialog";
 import { DeleteNoteDialog } from "./DeleteNoteDialog";
 import { Logo } from "./Logo";
+import { NoteCard, NoteSectionLabel, tagColor } from "./NoteCard";
 import { NoteColorPicker } from "./NoteColorPicker";
 import { PlanDialog, type PlanReason } from "./PlanDialog";
 import { Avatar, ProfileDialog } from "./ProfileDialog";
@@ -66,22 +67,6 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 // Cmd/Ctrl+N belong to the browser (new window), so new notes use Option/Alt+N.
 const NEW_NOTE_SHORTCUT = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌥N" : "Alt+N";
 
-const TAG_COLORS = [
-  "bg-red-50 text-red-700 hover:bg-red-100",
-  "bg-orange-50 text-orange-700 hover:bg-orange-100",
-  "bg-amber-50 text-amber-700 hover:bg-amber-100",
-  "bg-lime-50 text-lime-700 hover:bg-lime-100",
-  "bg-emerald-50 text-emerald-700 hover:bg-emerald-100",
-  "bg-cyan-50 text-cyan-700 hover:bg-cyan-100",
-  "bg-blue-50 text-blue-700 hover:bg-blue-100",
-  "bg-violet-50 text-violet-700 hover:bg-violet-100",
-  "bg-pink-50 text-pink-700 hover:bg-pink-100",
-] as const;
-
-function tagColor(tag: string) {
-  const hash = Array.from(tag.toLowerCase()).reduce((value, character) => ((value * 31) + character.charCodeAt(0)) >>> 0, 0);
-  return TAG_COLORS[hash % TAG_COLORS.length];
-}
 
 export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }: Props) {
   const [notes, setNotes] = useState<OpenNote[]>([]);
@@ -409,25 +394,20 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
   const currentNote = notes.find((note) => note.encrypted.id === selectedId);
   const metaLocked = !selectedId || Boolean(currentNote?.locked);
 
-  const renderNoteItem = (note: OpenNote) => {
-    const selected = selectedId === note.encrypted.id;
-    const colorClass = noteColorClass(note.document.color);
-    const surface = colorClass
-      ? `${colorClass} note-card ${selected ? "shadow-sm ring-1 ring-neutral-900/15" : "hover:ring-1 hover:ring-neutral-900/10"}`
-      : selected ? "bg-white shadow-sm ring-1 ring-neutral-900/[.07]" : "hover:bg-neutral-200/60";
-    return <button key={note.encrypted.id} className={`mb-1 grid w-full gap-1 rounded-xl px-3 py-3 text-left transition ${surface}`} onClick={() => selectNote(note)}>
-      <strong className="flex items-center gap-1.5 truncate text-[0.8125rem] font-semibold">
-        {note.locked && <LockSimple size={12} weight="fill" className="shrink-0 text-amber-600" />}
-        <span className="truncate">{note.document.title || "Untitled"}</span>
-        {note.document.favorite && <Star size={12} weight="fill" className="ml-auto shrink-0 text-amber-500" />}
-      </strong>
-      <span className="truncate text-xs text-neutral-500">{note.locked ? "Locked with a note password" : noteExcerpt(note.document.markdown).replace(/[#*_>`]/g, "").slice(0, 82) || "Empty note"}</span>
-      {note.document.tags.length > 0 && <span className="flex gap-1 overflow-hidden pt-0.5">{note.document.tags.slice(0, 3).map((tag) => <span key={tag} className={`truncate rounded px-1.5 py-0.5 text-[0.5625rem] font-medium ${tagColor(tag)}`}>#{tag}</span>)}</span>}
-      <small className="mt-1 flex items-center justify-between text-[0.625rem] text-neutral-400"><time>{new Date(note.encrypted.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</time><span className={note.encrypted.syncStatus === "conflict" ? "text-red-500" : ""}>{note.encrypted.syncStatus === "synced" ? "Saved" : note.encrypted.syncStatus}</span></small>
-    </button>;
-  };
-  const sectionLabel = (icon: React.ReactNode, label: string, count: number) =>
-    <div className="flex items-center justify-between px-2 pb-2 pt-1 text-[0.6875rem] font-semibold uppercase tracking-[.08em] text-neutral-400"><span className="flex items-center gap-1.5">{icon} {label}</span><span>{count}</span></div>;
+  const renderNoteItem = (note: OpenNote) => <NoteCard
+    key={note.encrypted.id}
+    title={note.document.title}
+    excerpt={noteExcerpt(note.document.markdown).replace(/[#*_>`]/g, "").slice(0, 82)}
+    tags={note.document.tags}
+    favorite={note.document.favorite}
+    color={note.document.color}
+    locked={note.locked}
+    dateLabel={new Date(note.encrypted.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+    statusLabel={note.encrypted.syncStatus === "synced" ? "Saved" : note.encrypted.syncStatus}
+    conflict={note.encrypted.syncStatus === "conflict"}
+    selected={selectedId === note.encrypted.id}
+    onSelect={() => selectNote(note)}
+  />;
   const hasNotePassword = Boolean(currentNote?.protectionSalt || (selectedId && noteProtections.current.has(selectedId)));
 
   return <div className="flex h-screen overflow-hidden bg-white text-neutral-950">
@@ -451,11 +431,11 @@ export function NotesWorkspace({ vaultKey, firstRun = false, onLock, onLogout }:
         </div>
         <div className="overflow-y-auto px-2 pb-3">
           {favoriteNotes.length > 0 && <div className="mb-3">
-            {sectionLabel(<Star size={13} weight="fill" className="text-amber-500" />, "Favourites", favoriteNotes.length)}
+            <NoteSectionLabel icon={<Star size={13} weight="fill" className="text-amber-500" />} label="Favourites" count={favoriteNotes.length} />
             {favoriteNotes.map(renderNoteItem)}
           </div>}
           {otherNotes.length > 0 && <>
-            {sectionLabel(<List size={13} weight="bold" />, favoriteNotes.length ? "Other notes" : "All notes", otherNotes.length)}
+            <NoteSectionLabel icon={<List size={13} weight="bold" />} label={favoriteNotes.length ? "Other notes" : "All notes"} count={otherNotes.length} />
             {otherNotes.map(renderNoteItem)}
           </>}
           {!visibleNotes.length && <div className="px-5 py-14 text-center"><NotePencil className="mx-auto mb-3 text-neutral-300" size={30} weight="duotone" /><p className="text-sm font-medium text-neutral-600">{query ? "No matching notes" : "No notes yet"}</p><span className="mt-1 block text-xs leading-5 text-neutral-400">{query ? "Try another search." : "Create a note to start writing."}</span></div>}
