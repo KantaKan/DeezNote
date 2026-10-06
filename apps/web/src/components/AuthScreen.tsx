@@ -6,7 +6,7 @@ import { Logo } from "./Logo";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 
-export function AuthScreen({ mode, onAuthenticated }: { mode: "login" | "register"; onAuthenticated: () => void }) {
+export function AuthScreen({ mode, onAuthenticated }: { mode: "login" | "register"; onAuthenticated: (password: string) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -18,7 +18,7 @@ export function AuthScreen({ mode, onAuthenticated }: { mode: "login" | "registe
     setError("");
     try {
       await api.authenticate(mode, email, password);
-      onAuthenticated();
+      onAuthenticated(password);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "Could not authenticate");
     } finally {

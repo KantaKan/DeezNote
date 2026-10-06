@@ -9,6 +9,8 @@ import { Input } from "./ui/input";
 
 interface Props {
   envelope: EncryptedVault | null;
+  /** Known right after signing in; the new passphrase must differ from it. */
+  accountPassword?: string | null;
   /** `created` carries the new envelope so the app knows the vault exists from now on. */
   onUnlocked: (key: Uint8Array, created?: EncryptedVault) => void;
   onLogout: () => void;
@@ -17,8 +19,9 @@ interface Props {
 const MIN_LENGTH = 12;
 
 /** A rough guide, not a guarantee: rewards length and several random words over symbol soup. */
-function passphraseStrength(value: string) {
+function passphraseStrength(value: string, accountPassword?: string | null) {
   if (value.length < MIN_LENGTH) return { score: 0, label: `At least ${MIN_LENGTH} characters` };
+  if (accountPassword && value === accountPassword) return { score: 0, label: "Use something other than your account password" };
   const words = value.trim().split(/[\s\-_.]+/).filter((word) => word.length >= 3).length;
   const classes = [/[a-z]/, /[A-Z]/, /\d/, /[^a-zA-Z\d\s]/].filter((pattern) => pattern.test(value)).length;
   let score = value.length >= 24 ? 3 : value.length >= 18 ? 2 : 1;
@@ -58,7 +61,7 @@ function Steps({ current }: { current: number }) {
   </div>;
 }
 
-function CreateVault({ onCreated }: { onCreated: (key: Uint8Array, envelope: EncryptedVault) => void }) {
+function CreateVault({ accountPassword, onCreated }: { accountPassword?: string | null; onCreated: (key: Uint8Array, envelope: EncryptedVault) => void }) {
   const [step, setStep] = useState(1);
   const [passphrase, setPassphrase] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -67,7 +70,7 @@ function CreateVault({ onCreated }: { onCreated: (key: Uint8Array, envelope: Enc
   const [understood, setUnderstood] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const strength = passphraseStrength(passphrase);
+  const strength = passphraseStrength(passphrase, accountPassword);
   const matches = confirmation.length > 0 && confirmation === passphrase;
 
   async function create(event: FormEvent) {
@@ -108,7 +111,7 @@ function CreateVault({ onCreated }: { onCreated: (key: Uint8Array, envelope: Enc
     <p className="mt-3 text-sm leading-6 text-neutral-500">Four or more random words are easy to remember and hard to guess, like <span className="font-medium text-neutral-700">"copper lantern river moss"</span>.</p>
     <div className="mt-7 grid gap-5">
       <label className="grid gap-2 text-sm font-medium text-neutral-700">
-        <span className="flex items-center justify-between">Vault passphrase<span className={`text-xs font-normal ${strength.score >= 3 ? "text-emerald-600" : strength.score === 2 ? "text-amber-600" : "text-neutral-400"}`}>{strength.label}</span></span>
+        <span className="flex items-center justify-between">Vault passphrase<span className={`text-xs font-normal ${strength.score >= 3 ? "text-emerald-600" : strength.score === 2 ? "text-amber-600" : strength.score === 0 && passphrase.length >= MIN_LENGTH ? "text-red-600" : "text-neutral-400"}`}>{strength.label}</span></span>
         <PassphraseInput value={passphrase} onChange={setPassphrase} visible={visible} onToggle={() => setVisible((v) => !v)} placeholder={`At least ${MIN_LENGTH} characters`} autoFocus />
         <span className="grid grid-cols-4 gap-1.5" aria-hidden="true">
           {[1, 2, 3, 4].map((bar) => <span key={bar} className={`h-1 rounded-full transition-colors ${bar <= strength.score ? strength.score >= 3 ? "bg-emerald-500" : strength.score === 2 ? "bg-amber-500" : "bg-red-400" : "bg-neutral-200"}`} />)}
@@ -148,14 +151,14 @@ function CreateVault({ onCreated }: { onCreated: (key: Uint8Array, envelope: Enc
   </form>;
 }
 
-export function VaultScreen({ envelope, onUnlocked, onLogout }: Props) {
+export function VaultScreen({ envelope, accountPassword, onUnlocked, onLogout }: Props) {
   const [passphrase, setPassphrase] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const email = localStorage.getItem("save-text-email");
 
   if (!envelope) {
-    return <Card email={email} onLogout={onLogout}><CreateVault onCreated={(key, created) => onUnlocked(key, created)} /></Card>;
+    return <Card email={email} onLogout={onLogout}><CreateVault accountPassword={accountPassword} onCreated={(key, created) => onUnlocked(key, created)} /></Card>;
   }
 
   async function unlock(event: FormEvent) {

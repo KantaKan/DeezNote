@@ -16,6 +16,9 @@ export function App() {
   const [vaultKey, setVaultKey] = useState<Uint8Array | null>(null);
   // True only right after this browser created the vault: the workspace seeds a welcome note once.
   const [firstRun, setFirstRun] = useState(false);
+  // The account password from this session's sign-in, kept in memory only until the vault opens, so vault
+  // creation can refuse it as the passphrase (the server sees the account password at every sign-in).
+  const [accountPassword, setAccountPassword] = useState<string | null>(null);
   const pathname = usePathname();
 
   const legalPage = pathname === "/privacy" ? "privacy" : pathname === "/terms" ? "terms" : null;
@@ -100,7 +103,7 @@ export function App() {
   if (legalPage) return <LegalPage kind={legalPage} signedIn={authenticated} />;
   if (!authenticated) {
     if (pathname === "/login" || pathname === "/signup") {
-      return <AuthScreen mode={pathname === "/signup" ? "register" : "login"} onAuthenticated={() => setAuthenticated(true)} />;
+      return <AuthScreen mode={pathname === "/signup" ? "register" : "login"} onAuthenticated={(password) => { setAccountPassword(password); setAuthenticated(true); }} />;
     }
     return <Landing />;
   }
@@ -108,7 +111,9 @@ export function App() {
   if (!vaultKey) {
     return <VaultScreen
       envelope={envelope}
+      accountPassword={accountPassword}
       onUnlocked={(key, created) => {
+        setAccountPassword(null);
         // Remember a just-created vault, so a later auto-lock shows "Unlock" instead of "Create" again.
         if (created) {
           setEnvelope(created);
