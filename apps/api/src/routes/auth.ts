@@ -15,6 +15,10 @@ const credentials = t.Object({
 // because each hash stores its own parameters. Note encryption is client-side and unaffected.
 const PASSWORD_HASH_OPTIONS = { algorithm: "argon2id", memoryCost: 19_456, timeCost: 2 } as const;
 
+// Verified against when the email has no account, so a failed login takes the same time either way
+// and response timing doesn't reveal which emails are registered.
+const decoyHash = Bun.password.hash(crypto.randomUUID(), PASSWORD_HASH_OPTIONS);
+
 export function createAuthRoutes(security: Security) {
   return new Elysia({ name: "routes.auth", prefix: "/auth" })
   .post("/register", async ({ body, set }) => {
@@ -39,7 +43,9 @@ export function createAuthRoutes(security: Security) {
     const email = body.email.trim().toLowerCase();
     security.checkLogin(email);
     const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
-    if (!user || !(await security.withPasswordHash(() => Bun.password.verify(body.password, user.passwordHash)))) {
+    const passwordHash = user?.passwordHash ?? await decoyHash;
+    const valid = await security.withPasswordHash(() => Bun.password.verify(body.password, passwordHash));
+    if (!user || !valid) {
       set.status = 401;
       return { error: "Invalid email or password" };
     }

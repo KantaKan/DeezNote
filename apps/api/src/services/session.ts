@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, lte } from "drizzle-orm";
 import { config } from "../config";
 import { db } from "../db";
 import { sessions } from "../db/schema";
@@ -12,7 +12,13 @@ async function hashToken(token: string) {
   return Buffer.from(digest).toString("hex");
 }
 
+/** Removes every expired session. Runs on each sign-in, so expired rows don't outlive the next login by anyone. */
+export async function deleteExpiredSessions(now = new Date()) {
+  await db.delete(sessions).where(lte(sessions.expiresAt, now));
+}
+
 export async function createSession(userId: string) {
+  await deleteExpiredSessions();
   const token = createToken();
   const expiresAt = new Date(Date.now() + config.sessionDays * 86_400_000);
   await db.insert(sessions).values({ tokenHash: await hashToken(token), userId, expiresAt });
@@ -29,7 +35,11 @@ export async function getAuthenticatedUserId(authorization?: string) {
     .where(eq(sessions.tokenHash, await hashToken(token)))
     .limit(1);
 
-  if (!session || session.expiresAt <= new Date()) return null;
+  if (!session) return null;
+  if (session.expiresAt <= new Date()) {
+    await db.delete(sessions).where(eq(sessions.tokenHash, await hashToken(token)));
+    return null;
+  }
   return session.userId;
 }
 

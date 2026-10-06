@@ -44,6 +44,16 @@ function normalizeIp(ip: string) {
   return ip.startsWith("::ffff:") && isIP(ip.slice(7)) === 4 ? ip.slice(7) : ip;
 }
 
+/** Rate-limit key for an address: IPv6 is grouped by /64, since one client usually controls a whole /64. */
+export function rateLimitKey(ip: string) {
+  if (isIP(ip) !== 6) return ip;
+  const [head, tail = ""] = ip.split("::");
+  const left = head ? head.split(":") : [];
+  const right = tail ? tail.split(":") : [];
+  const groups = ip.includes("::") ? [...left, ...Array(8 - left.length - right.length).fill("0"), ...right] : left;
+  return `${groups.slice(0, 4).map((group) => (Number.parseInt(group, 16) || 0).toString(16)).join(":")}::/64`;
+}
+
 function ipv4ToNumber(ip: string) {
   return ip.split(".").reduce((value, octet) => value * 256 + Number(octet), 0);
 }
@@ -112,7 +122,7 @@ export class Security {
     }
     const encoding = request.headers.get("content-encoding");
     if (encoding && encoding.toLowerCase() !== "identity") throw new RequestProtectionError(415, "Encoded request bodies are not supported");
-    const ip = this.clientIp(request, peer);
+    const ip = rateLimitKey(this.clientIp(request, peer));
     this.limiter.check(`request:${ip}`, this.options.requestsPerMinute, 60_000);
     const path = new URL(request.url).pathname.replace(/\/$/, "");
     if (request.method === "POST" && (path === "/auth/login" || path === "/auth/register" || path === "/auth/delete-account")) {

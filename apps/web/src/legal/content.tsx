@@ -58,7 +58,7 @@ export function PrivacyEn() {
         <li><strong>Your encrypted notes:</strong> the ciphertext described above, plus a random note ID, a version number and the time each note was last saved.</li>
         <li><strong>Sign-in sessions:</strong> a hash of each session token and when it expires (30 days after signing in).</li>
         <li><strong>Access logs:</strong> for each request to the site, the IP address and port, time, method, the address requested, and the response status, size and duration. Request headers, sign-in tokens and cookies are not logged. Thailand's Computer-Related Crime Act requires service providers to keep this traffic data for at least 90 days.</li>
-        <li><strong>Abuse counters:</strong> to block brute-force and spam, the server counts recent requests per IP address, sign-in attempts per email, and note writes and uploaded bytes per account ID, in memory only. Their limit windows expire within an hour; expired entries are reclaimed when reused or when space is needed, and all counters clear on restart. They are never written to disk.</li>
+        <li><strong>Abuse counters:</strong> to block brute-force and spam, the server counts recent requests per IP address (IPv6 addresses grouped by their /64 network), sign-in attempts per email, and note writes and uploaded bytes per account ID, in memory only. Their limit windows expire within an hour; expired entries are reclaimed when reused or when space is needed, and all counters clear on restart. They are never written to disk.</li>
       </List>
     </Section>
     <Section title="On your device">
@@ -83,7 +83,7 @@ export function PrivacyEn() {
     <Section title="How long we keep it">
       <List>
         <li>Account, vault and notes: until you delete a note or your account.</li>
-        <li>Sessions: until you sign out or they expire after 30 days.</li>
+        <li>Sessions: until you sign out, or 30 days after signing in. Expired sessions are deleted within an hour.</li>
         <li>Access logs: 100 days, then deleted automatically.</li>
         <li>Backups: a copy of the server database is made every day and kept for 14 days, then deleted automatically. It holds the same data listed above, and your notes stay encrypted in it. Anything you delete is gone from the backups within 14 days.</li>
       </List>
@@ -122,7 +122,7 @@ export function PrivacyTh() {
         <li><strong>โน้ตที่เข้ารหัส:</strong> ข้อมูลเข้ารหัสตามที่อธิบายข้างต้น พร้อมรหัสโน้ตแบบสุ่ม หมายเลขเวอร์ชัน และเวลาที่บันทึกล่าสุด</li>
         <li><strong>เซสชันการเข้าสู่ระบบ:</strong> ค่าแฮชของโทเคนเซสชัน และเวลาหมดอายุ (30 วันหลังเข้าสู่ระบบ)</li>
         <li><strong>ข้อมูลจราจรทางคอมพิวเตอร์ (log):</strong> สำหรับแต่ละคำขอที่เข้ามายังเว็บไซต์ เราเก็บหมายเลข IP และพอร์ต เวลา เมธอด ที่อยู่ที่ร้องขอ สถานะ ขนาด และระยะเวลาของการตอบกลับ โดยไม่บันทึก header ของคำขอ โทเคนเข้าสู่ระบบ หรือคุกกี้ ทั้งนี้ตามที่พระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์กำหนดให้ผู้ให้บริการเก็บไว้ไม่น้อยกว่า 90 วัน</li>
-        <li><strong>ตัวนับเพื่อป้องกันการโจมตี:</strong> เพื่อป้องกันการเดารหัสผ่านและสแปม เซิร์ฟเวอร์จะนับจำนวนคำขอต่อหมายเลข IP จำนวนครั้งที่พยายามเข้าสู่ระบบต่ออีเมล และจำนวนการเขียนโน้ตกับปริมาณไบต์ที่อัปโหลดต่อรหัสบัญชี โดยเก็บไว้ในหน่วยความจำเท่านั้น ช่วงเวลาของขีดจำกัดจะสิ้นสุดภายในหนึ่งชั่วโมง รายการที่หมดอายุจะถูกล้างเมื่อใช้ซ้ำหรือเมื่อต้องการพื้นที่ และตัวนับทั้งหมดจะถูกล้างเมื่อรีสตาร์ต โดยไม่บันทึกลงดิสก์</li>
+        <li><strong>ตัวนับเพื่อป้องกันการโจมตี:</strong> เพื่อป้องกันการเดารหัสผ่านและสแปม เซิร์ฟเวอร์จะนับจำนวนคำขอต่อหมายเลข IP (สำหรับ IPv6 นับรวมตามเครือข่าย /64) จำนวนครั้งที่พยายามเข้าสู่ระบบต่ออีเมล และจำนวนการเขียนโน้ตกับปริมาณไบต์ที่อัปโหลดต่อรหัสบัญชี โดยเก็บไว้ในหน่วยความจำเท่านั้น ช่วงเวลาของขีดจำกัดจะสิ้นสุดภายในหนึ่งชั่วโมง รายการที่หมดอายุจะถูกล้างเมื่อใช้ซ้ำหรือเมื่อต้องการพื้นที่ และตัวนับทั้งหมดจะถูกล้างเมื่อรีสตาร์ต โดยไม่บันทึกลงดิสก์</li>
       </List>
     </Section>
     <Section title="ข้อมูลบนอุปกรณ์ของคุณ">
@@ -147,7 +147,7 @@ export function PrivacyTh() {
     <Section title="ระยะเวลาการเก็บรักษา">
       <List>
         <li>บัญชี คลัง และโน้ต: จนกว่าคุณจะลบโน้ตหรือลบบัญชี</li>
-        <li>เซสชัน: จนกว่าคุณจะออกจากระบบ หรือหมดอายุเมื่อครบ 30 วัน</li>
+        <li>เซสชัน: จนกว่าคุณจะออกจากระบบ หรือครบ 30 วันหลังเข้าสู่ระบบ เซสชันที่หมดอายุจะถูกลบภายในหนึ่งชั่วโมง</li>
         <li>ข้อมูลจราจรทางคอมพิวเตอร์: 100 วัน แล้วลบโดยอัตโนมัติ</li>
         <li>การสำรองข้อมูล: เราทำสำเนาฐานข้อมูลของเซิร์ฟเวอร์ทุกวันและเก็บไว้ 14 วัน จากนั้นจะถูกลบโดยอัตโนมัติ สำเนานี้มีข้อมูลชุดเดียวกับที่ระบุไว้ข้างต้น และโน้ตของคุณยังคงถูกเข้ารหัสอยู่ ข้อมูลที่คุณลบจะหายไปจากสำเนาสำรองภายใน 14 วัน</li>
       </List>

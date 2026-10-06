@@ -1,7 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { createApp } from "./app";
 import { config } from "./config";
-import { RateLimiter, RequestProtectionError, Security, type SecurityOptions } from "./services/security";
+import { eq } from "drizzle-orm";
+import { db } from "./db";
+import { sessions, users } from "./db/schema";
+import { RateLimiter, rateLimitKey, RequestProtectionError, Security, type SecurityOptions } from "./services/security";
+import { createSession, deleteExpiredSessions, getAuthenticatedUserId } from "./services/session";
 
 function setup(overrides: Partial<SecurityOptions> = {}) {
   const security = new Security({ ...config.security, trustedProxyIps: [], ...overrides });
@@ -204,5 +208,44 @@ describe("limiter and proxy trust", () => {
     const security = new Security({ ...config.security, maxConcurrentHashes: 1 });
     await expect(security.withPasswordHash(async () => { throw new Error("hash failed"); })).rejects.toThrow("hash failed");
     expect(await security.withPasswordHash(async () => "ok")).toBe("ok");
+  });
+});
+
+describe("sessions and sign-in hardening", () => {
+  test("groups IPv6 clients by /64 and leaves IPv4 alone", () => {
+    expect(rateLimitKey("203.0.113.5")).toBe("203.0.113.5");
+    expect(rateLimitKey("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1:2::/64");
+    expect(rateLimitKey("2001:db8:1:2:ffff:ffff:ffff:ffff")).toBe("2001:db8:1:2::/64");
+    expect(rateLimitKey("2001:0db8:0001:0002::")).toBe("2001:db8:1:2::/64");
+    expect(rateLimitKey("::1")).toBe("0:0:0:0::/64");
+    expect(rateLimitKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
+  });
+
+  test("deletes expired sessions instead of keeping them", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(users).values({ id, email: `${id}@example.com`, passwordHash: "test-only" });
+    try {
+      const { token } = await createSession(id);
+      await db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(sessions.userId, id));
+      expect(await getAuthenticatedUserId(`Bearer ${token}`)).toBeNull();
+      expect(await db.select().from(sessions).where(eq(sessions.userId, id))).toHaveLength(0);
+
+      await createSession(id);
+      await db.update(sessions).set({ expiresAt: new Date(Date.now() - 1000) }).where(eq(sessions.userId, id));
+      await deleteExpiredSessions();
+      expect(await db.select().from(sessions).where(eq(sessions.userId, id))).toHaveLength(0);
+    } finally {
+      await db.delete(users).where(eq(users.id, id));
+    }
+  });
+
+  test("a login for an unknown email still verifies a password hash", async () => {
+    let hashes = 0;
+    const security = new Security({ ...config.security, trustedProxyIps: [] });
+    const original = security.withPasswordHash.bind(security);
+    security.withPasswordHash = (work) => { hashes++; return original(work); };
+    const response = await createApp(security).handle(new Request("http://localhost/auth/login", json({ email: "nobody-here@example.com", password: "long-enough-password" })));
+    expect(response.status).toBe(401);
+    expect(hashes).toBe(1);
   });
 });
