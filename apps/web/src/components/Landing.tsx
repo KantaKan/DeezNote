@@ -83,9 +83,9 @@ function SavingsCalculator({ plan }: { plan: PlanPrices }) {
   const saved = monthlyTotal - yearlyTotal;
   const freeMonths = Math.floor(saved / plan.monthly);
 
-  return <div data-reveal className="mt-4 grid gap-8 rounded-2xl bg-neutral-50 p-7 ring-1 ring-neutral-900/[.07] sm:p-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-14">
+  return <div data-reveal className="mt-14 grid gap-10 border-t border-neutral-200 pt-12 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-center md:gap-16">
     <div>
-      <h3 className="text-xl font-semibold tracking-tight">See what yearly saves you</h3>
+      <h3 className="text-2xl font-bold tracking-[-.03em] sm:text-3xl">See what yearly saves you</h3>
       <p className="mt-2 text-[0.9375rem] leading-relaxed text-neutral-600">Drag to how long you'd keep Pro.</p>
       <label className="mt-7 block">
         <span className="flex items-baseline justify-between text-sm">
@@ -328,48 +328,71 @@ export function Landing() {
       <Pricing />
 
       {/* The honest trade-off: the limitation is the privacy promise, plus what that means for you. */}
-      <section className="border-y border-neutral-200 bg-neutral-50">
-        <div className="mx-auto grid max-w-6xl gap-12 px-5 py-20 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-20 lg:py-28">
-          <h2 data-reveal className="max-w-[16ch] text-balance text-4xl font-bold leading-[1.05] tracking-[-.04em] sm:text-5xl">We can't reset your passphrase. <span className="text-neutral-500">That's the point.</span></h2>
-
-          <div data-reveal className="grid content-start gap-10 lg:pt-2">
-            <div className="flex gap-4">
-              <Key size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
-              <div>
-                <h3 className="font-semibold text-neutral-950">Your key never leaves your device</h3>
-                <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Your passphrase unlocks your notes inside your browser. We never receive it, so there is nothing to reset. Keep it somewhere safe.</p>
-              </div>
+      <section className="mx-auto max-w-6xl px-5 pb-20 sm:px-8 lg:pb-28">
+        <h2 data-reveal className="max-w-[22ch] text-balance text-4xl font-bold leading-[1.05] tracking-[-.04em] sm:text-5xl">We can't reset your passphrase. <span className="text-neutral-500">That's the point.</span></h2>
+        <div data-reveal className="mt-12 grid gap-10 md:grid-cols-2 md:gap-16">
+          <div className="flex gap-4 border-t border-neutral-200 pt-8">
+            <Key size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
+            <div>
+              <h3 className="font-semibold text-neutral-950">Your key never leaves your device</h3>
+              <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Your passphrase unlocks your notes inside your browser. We never receive it, so there is nothing to reset. Keep it somewhere safe.</p>
             </div>
-            <div className="flex gap-4 border-t border-neutral-200 pt-10">
-              <Code size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
-              <div>
-                <h3 className="font-semibold text-neutral-950">Open source, not yet audited</h3>
-                <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Anyone can read how the encryption works. It has not had an independent audit yet, so hold off on your most sensitive secrets.</p>
-                <a href={REPO_URL} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-[0.9375rem] font-medium text-amber-700 underline decoration-amber-400/60 underline-offset-4 transition hover:decoration-amber-600">Read the code <ArrowRight size={15} weight="bold" /></a>
-              </div>
+          </div>
+          <div className="flex gap-4 border-t border-neutral-200 pt-8">
+            <Code size={24} weight="duotone" className="mt-0.5 shrink-0 text-amber-700" />
+            <div>
+              <h3 className="font-semibold text-neutral-950">Open source, not yet audited</h3>
+              <p className="mt-2 max-w-[46ch] leading-relaxed text-neutral-600">Anyone can read how the encryption works. It has not had an independent audit yet, so hold off on your most sensitive secrets.</p>
+              <a href={REPO_URL} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-1.5 text-[0.9375rem] font-medium text-amber-700 underline decoration-amber-400/60 underline-offset-4 transition hover:decoration-amber-600">Read the code <ArrowRight size={15} weight="bold" /></a>
             </div>
           </div>
         </div>
       </section>
 
-      <section>
-        <div data-reveal className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-5 py-16 sm:px-8 md:flex-row md:items-center">
-          <h2 className="text-2xl font-bold tracking-[-.03em] sm:text-3xl">Start writing privately.</h2>
-          <a {...linkProps("/signup")} className={primaryButton}>Create account <ArrowRight size={16} weight="bold" /></a>
+      {/* Closing card: same premium language as the Pro card, so the page ends on a decision, not a strip. */}
+      <section className="mx-auto max-w-6xl px-5 pb-20 sm:px-8 lg:pb-24">
+        <div data-reveal className={`relative isolate overflow-hidden rounded-2xl bg-neutral-900 px-8 py-14 text-neutral-50 ring-1 ring-amber-400/40 sm:px-14 sm:py-16 ${panelShadow}`}>
+          <span aria-hidden="true" className="pointer-events-none absolute -bottom-32 -left-24 -z-10 size-96 rounded-full bg-amber-400/15 blur-3xl" />
+          <span aria-hidden="true" className="pointer-events-none absolute inset-x-12 top-0 -z-10 h-px bg-gradient-to-r from-transparent via-amber-300/70 to-transparent" />
+          <div className="flex flex-col items-start justify-between gap-10 md:flex-row md:items-end">
+            <div>
+              <Logo className="size-11 rounded-[22.6%] ring-1 ring-white/15" />
+              <h2 className="mt-7 max-w-[16ch] text-balance text-4xl font-bold leading-[1.05] tracking-[-.04em] sm:text-5xl">Start writing privately.</h2>
+              <p className="mt-4 max-w-[42ch] text-lg leading-relaxed text-neutral-400">Free forever. Every note is encrypted before it leaves your device.</p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <a {...linkProps("/signup")} className="inline-flex h-11 items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-amber-400 px-5 text-sm font-semibold text-amber-950 transition hover:bg-amber-300 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 dark:bg-amber-600 dark:text-amber-50 dark:hover:bg-amber-700">Create account <ArrowRight size={16} weight="bold" /></a>
+              <a {...linkProps("/login")} className="inline-flex h-11 items-center justify-center whitespace-nowrap rounded-lg px-5 text-sm font-medium text-neutral-200 ring-1 ring-white/20 transition hover:bg-white/10 active:translate-y-px">Sign in</a>
+            </div>
+          </div>
         </div>
       </section>
     </main>
 
     <footer className="border-t border-neutral-200">
-      <div className="mx-auto flex max-w-6xl flex-col gap-4 px-5 py-8 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between sm:px-8">
-        <span className="flex items-center gap-2.5 font-medium text-neutral-700"><Logo className="size-6" /> DeezNote</span>
-        <div className="flex items-center gap-5">
-          <a {...linkProps("/privacy")} className="transition hover:text-neutral-900">Privacy</a>
-          <a {...linkProps("/terms")} className="transition hover:text-neutral-900">Terms</a>
-          <a href={REPO_URL} target="_blank" rel="noreferrer" className="transition hover:text-neutral-900">Read the code</a>
-          <a {...linkProps("/login")} className="transition hover:text-neutral-900">Sign in</a>
+      <div className="mx-auto grid max-w-6xl gap-10 px-5 py-12 sm:px-8 md:grid-cols-[minmax(0,1fr)_auto] md:gap-16">
+        <div>
+          <span className="flex items-center gap-2.5 font-semibold text-neutral-900"><Logo className="size-7" /> DeezNote</span>
+          <p className="mt-3 max-w-[32ch] text-sm leading-relaxed text-neutral-500">End-to-end encrypted Markdown notes. Open source.</p>
+        </div>
+        <div className="grid grid-cols-3 gap-10 text-sm sm:gap-14">
+          {[
+            { title: "Product", links: [{ label: "Pricing", href: "#pricing" }, { label: "Sign in", to: "/login" }, { label: "Create account", to: "/signup" }] },
+            { title: "Legal", links: [{ label: "Privacy", to: "/privacy" }, { label: "Terms", to: "/terms" }] },
+            { title: "Code", links: [{ label: "Read the code", href: REPO_URL, external: true }] },
+          ].map((group) => <div key={group.title}>
+            <p className="font-medium text-neutral-900">{group.title}</p>
+            <ul className="mt-3 grid gap-2.5 text-neutral-500">
+              {group.links.map((link) => <li key={link.label}>
+                {"to" in link && link.to
+                  ? <a {...linkProps(link.to)} className="transition hover:text-neutral-900">{link.label}</a>
+                  : <a href={link.href} {...("external" in link && link.external ? { target: "_blank", rel: "noreferrer" } : {})} className="transition hover:text-neutral-900">{link.label}</a>}
+              </li>)}
+            </ul>
+          </div>)}
         </div>
       </div>
+      <div className="mx-auto max-w-6xl border-t border-neutral-100 px-5 py-6 text-xs text-neutral-400 sm:px-8">© {new Date().getFullYear()} DeezNote</div>
     </footer>
   </div>;
 }
