@@ -20,6 +20,9 @@ services:
     depends_on: [api]
     volumes:
       - logs:/logs
+    # Traefik reaches `web` over dokploy-network; `web` reaches `api` over the project's default network.
+    # Listed explicitly because Dokploy otherwise swaps the default network out when it adds its own.
+    networks: [default, dokploy-network]
 
   # Daily SQLite snapshots kept 7 days (deploy/backup.sh).
   backup:
@@ -29,6 +32,10 @@ services:
     volumes:
       - db:/data
       - backups:/backups
+
+networks:
+  dokploy-network:
+    external: true
 
 volumes:
   db:

@@ -21,7 +21,8 @@ internet → Traefik (Dokploy, HTTPS) → web (Caddy: PWA + /api proxy) → api 
    link-preview URLs in the web build.
 3. **Domains**: add the domain on service `web`, port `80`, HTTPS on (Let's Encrypt). Point the domain's DNS A record
    at the VPS first.
-4. **Deploy**, then turn on **Auto Deploy**.
+4. **Deploy**, then turn on **Auto Deploy**. Leave **Isolated Deployments** off: `docker-compose.yml` already joins
+   `web` to `dokploy-network` itself.
 
 Leave Traefik's access logs ("Requests" in Dokploy) off: Caddy already logs every request.
 
