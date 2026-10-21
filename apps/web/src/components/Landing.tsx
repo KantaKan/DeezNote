@@ -1,10 +1,11 @@
 import { ArrowDown, ArrowRight, Check, Code, Crown, Key, List, MarkdownLogo, Star, WifiSlash } from "@phosphor-icons/react";
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { REPO_URL } from "../legal/policy";
 import { linkProps } from "../lib/router";
 import { Logo } from "./Logo";
 import { NoteCard, NoteSectionLabel } from "./NoteCard";
 import { NoteColorSwatches } from "./NoteColorPicker";
+
+const REPO_URL = "https://github.com/KantaKan/DeezNote";
 
 // Public front door. Light and dark come from the same palette tokens as the app (styles.css),
 // so every class here works in both themes. Shape system: buttons rounded-lg, panels and images rounded-2xl.
@@ -365,10 +366,9 @@ export function Landing() {
           <span className="flex items-center gap-2.5 font-semibold text-neutral-900"><Logo className="size-7" /> DeezNote</span>
           <p className="mt-3 max-w-[32ch] text-sm leading-relaxed text-neutral-500">End-to-end encrypted Markdown notes. Open source.</p>
         </div>
-        <div className="grid grid-cols-3 gap-10 text-sm sm:gap-14">
+        <div className="grid grid-cols-2 gap-10 text-sm sm:gap-14">
           {[
             { title: "Product", links: [{ label: "Pricing", href: "#pricing" }, { label: "Sign in", to: "/login" }, { label: "Create account", to: "/signup" }] },
-            { title: "Legal", links: [{ label: "Privacy", to: "/privacy" }, { label: "Terms", to: "/terms" }] },
             { title: "Code", links: [{ label: "Read the code", href: REPO_URL, external: true }] },
           ].map((group) => <div key={group.title}>
             <p className="font-medium text-neutral-900">{group.title}</p>

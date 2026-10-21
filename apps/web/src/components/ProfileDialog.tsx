@@ -87,8 +87,6 @@ export function ProfileDialog({ email, account, theme, onThemeChange, onExport, 
 
       <footer className="mt-8 flex items-center justify-between gap-4 border-t border-neutral-100 pt-5 text-sm">
         <div className="flex items-center gap-4 text-xs text-neutral-500">
-          <a href="/privacy" target="_blank" rel="noreferrer" className="hover:text-neutral-900">Privacy</a>
-          <a href="/terms" target="_blank" rel="noreferrer" className="hover:text-neutral-900">Terms</a>
           <button type="button" className="text-red-600 hover:text-red-700" onClick={onDeleteAccount}>Delete account</button>
         </div>
         <button type="button" className="-mr-2 flex items-center gap-1.5 rounded-md px-2 py-1 font-medium text-neutral-700 transition hover:bg-neutral-100 hover:text-neutral-950" onClick={onSignOut}><SignOut size={15} /> Sign out</button>

@@ -15,7 +15,6 @@ In scope:
 - The web app and API in this repository
 - The encryption design: anything that lets the server, or anyone else, read or tamper with notes undetected
 - Authentication, sessions and account deletion
-- The live service at deeznote.103-253-146-20.sslip.io, tested only with accounts you own
 
 Out of scope:
 

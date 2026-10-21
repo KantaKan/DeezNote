@@ -1,0 +1,50 @@
+# Caddy inside the `web` container (Dokploy). Traefik terminates HTTPS and forwards plain HTTP here.
+{
+	admin off
+	auto_https off
+	servers {
+		# Traefik is on a private Docker network. Strict mode reads X-Forwarded-For right to left, so a
+		# client-supplied value can't pose as the real address.
+		trusted_proxies static private_ranges
+		trusted_proxies_strict
+		client_ip_headers X-Forwarded-For
+	}
+}
+
+:80 {
+	encode zstd gzip
+
+	# Access logs: client IP and port, time, method, address, status, size and
+	# duration; no headers, tokens or cookies. Kept 100 days (Computer-Related Crime Act requires 90).
+	log {
+		output file /logs/access.log {
+			roll_keep_for 2400h
+		}
+		format filter {
+			request>headers delete
+			request>tls delete
+			resp_headers delete
+		}
+	}
+
+	handle_path /api/* {
+		reverse_proxy api:3000 {
+			# The API trusts the rightmost X-Forwarded-For entry from this container, so send only the
+			# client IP Caddy resolved above.
+			header_up X-Forwarded-For {client_ip}
+		}
+	}
+
+	handle {
+		header {
+			X-Content-Type-Options nosniff
+			Referrer-Policy no-referrer
+			X-Frame-Options DENY
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
+		}
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

@@ -1,6 +1,6 @@
-name: Build and deploy
+name: CI
 
-# Builds happen here, not on the droplet: `vite build` can run out of memory on a 1 GB server.
+# Checks every push and pull request. Deploys are done by Dokploy, which builds docker-compose.yml from main.
 on:
   push:
     branches: [main]
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -27,103 +27,7 @@ jobs:
       - name: Test
         run: bun test
 
-      - name: Build web
-        working-directory: apps/web
-        # Set the VITE_API_URL repository variable if the API isn't served at /api on the same domain.
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL || '/api' }}
-          # Public address for link previews; set the VITE_SITE_URL repository variable when the domain changes.
-          VITE_SITE_URL: ${{ vars.VITE_SITE_URL || 'https://deeznote.103-253-146-20.sslip.io' }}
-        run: bunx vite build
-
-      - name: Build API
-        run: bun run --cwd apps/api build
-
-      # One self-contained release: the bundled API needs no node_modules, only Bun.
-      - name: Package release
+      - name: Build
         run: |
-          mkdir -p release/api
-          cp -r apps/web/dist release/web
-          cp -r apps/api/dist release/api/dist
-          cp -r apps/api/drizzle release/api/drizzle
-          cp -r deploy release/deploy
-          tar -czf deeznote-release.tar.gz -C release .
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: deeznote-release
-          path: deeznote-release.tar.gz
-          retention-days: 14
-
-  # Ships the release to the droplet. Only for pushes to main, never for pull requests
-  # (secrets are not available to fork PRs on a public repo anyway).
-  deploy:
-    needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-    concurrency:
-      group: deploy-production
-      cancel-in-progress: false
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: deeznote-release
-
-      # Fail early with a readable reason (shown as an annotation) instead of a bare SSH error.
-      - name: Check deploy secrets
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          fail() { echo "::error title=Deploy secrets::$1"; exit 1; }
-          [ -n "$DEPLOY_HOST" ] || fail "DEPLOY_HOST is empty. Set it to the droplet's IP address."
-          printf '%s\n' "$DEPLOY_HOST" | grep -Eq '^[0-9A-Za-z.:-]+$' || fail "DEPLOY_HOST must be just the IP or hostname, with no spaces, user@ or https://."
-          [ -n "$DEPLOY_SSH_KEY" ] || fail "DEPLOY_SSH_KEY is empty."
-          printf '%s\n' "$DEPLOY_SSH_KEY" | grep -q "PRIVATE KEY-----" || fail "DEPLOY_SSH_KEY is not a private key. Paste the whole file ~/.ssh/deeznote_deploy (not the .pub), including the BEGIN and END lines."
-          printf '%s\n' "$DEPLOY_SSH_KEY" > /tmp/key && chmod 600 /tmp/key
-          ssh-keygen -y -f /tmp/key > /dev/null 2>&1 || { rm -f /tmp/key; fail "DEPLOY_SSH_KEY can't be read. Re-copy it with: cat ~/.ssh/deeznote_deploy"; }
-          rm -f /tmp/key
-          [ -n "$DEPLOY_KNOWN_HOSTS" ] || fail "DEPLOY_KNOWN_HOSTS is empty. Set it to the output of: ssh-keyscan -t ed25519 <droplet IP>"
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" | grep -v '^#' | grep -q "^$DEPLOY_HOST " || fail "DEPLOY_KNOWN_HOSTS has no line starting with DEPLOY_HOST. Re-run ssh-keyscan -t ed25519 <droplet IP> and paste its output."
-
-      - name: Set up SSH
-        env:
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
-        run: |
-          install -m 700 -d ~/.ssh
-          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          cat >> ~/.ssh/config <<EOF
-          Host droplet
-            HostName ${{ secrets.DEPLOY_HOST }}
-            User deeznote
-            IdentityFile ~/.ssh/deploy_key
-            StrictHostKeyChecking yes
-          EOF
-
-      - name: Check SSH login
-        run: |
-          if ! ssh -o BatchMode=yes -o ConnectTimeout=15 droplet true 2> ssh.log; then
-            reason=$(grep -Ei "denied|refused|timed out|host key|no route|could not resolve|verification failed" ssh.log | head -1)
-            echo "::error title=SSH login failed::${reason:-$(tail -1 ssh.log)}"
-            exit 1
-          fi
-
-      - name: Upload and activate
-        env:
-          RELEASE: /srv/deeznote/releases/${{ github.sha }}
-        run: |
-          scp deeznote-release.tar.gz "droplet:$RELEASE.tar.gz"
-          ssh droplet "set -e
-            mkdir -p '$RELEASE'
-            tar -xzf '$RELEASE.tar.gz' -C '$RELEASE'
-            rm '$RELEASE.tar.gz'
-            bash '$RELEASE/deploy/activate.sh'"
-
-      - name: Remove SSH key
-        if: always()
-        run: rm -f ~/.ssh/deploy_key
+          (cd apps/web && VITE_API_URL=/api bunx vite build)
+          bun run --cwd apps/api build

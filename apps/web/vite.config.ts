@@ -5,8 +5,8 @@ import path from "node:path";
 import { defineConfig, type Plugin } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
-// Public address used for absolute link-preview URLs in index.html (%VITE_SITE_URL%). Set VITE_SITE_URL when the domain changes.
-process.env.VITE_SITE_URL ||= "https://deeznote.103-253-146-20.sslip.io";
+// Public address used for absolute link-preview URLs in index.html (%VITE_SITE_URL%). Docker builds pass SITE_URL.
+process.env.VITE_SITE_URL ||= "http://localhost:5173";
 
 /**
  * Production Content-Security-Policy as a <meta> tag (the dev server needs inline scripts and websockets, so

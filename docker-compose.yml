@@ -1,0 +1,36 @@
+# Dokploy: Compose service from this repo. Set SITE_URL (e.g. https://notes.example.com) in Environment and
+# add the same domain to the `web` service, port 80. The API is reachable only from `web`.
+services:
+  api:
+    build: { context: ., target: api }
+    restart: unless-stopped
+    environment:
+      WEB_ORIGIN: ${SITE_URL:?set SITE_URL}
+      # Only `web` (Caddy) can reach the API, over this project's private Docker network.
+      API_TRUSTED_PROXY_IPS: 172.16.0.0/12
+    volumes:
+      - db:/data
+    healthcheck:
+      test: ["CMD", "bun", "-e", "fetch('http://localhost:3000/health').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 30s
+
+  web:
+    build: { context: ., target: web, args: { VITE_SITE_URL: "${SITE_URL:?set SITE_URL}" } }
+    restart: unless-stopped
+    depends_on: [api]
+    volumes:
+      - logs:/logs
+
+  # Daily SQLite snapshots kept 7 days (deploy/backup.sh).
+  backup:
+    build: { context: ., target: backup }
+    restart: unless-stopped
+    depends_on: [api]
+    volumes:
+      - db:/data
+      - backups:/backups
+
+volumes:
+  db:
+  logs:
+  backups:

@@ -4,7 +4,7 @@ End-to-end encrypted Markdown notes that work offline.
 
 Notes are encrypted in the browser before they sync. The server stores ciphertext and the metadata it needs to sync it, and never sees a note's title, text, tags or photos.
 
-**[Try it](https://deeznote.103-253-146-20.sslip.io)** · [Privacy Policy](https://deeznote.103-253-146-20.sslip.io/privacy) · [Security](SECURITY.md)
+[Security](SECURITY.md)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="apps/web/public/landing/workspace-dark.webp">
@@ -48,7 +48,7 @@ vault passphrase ──Argon2id──▶ passphrase key ──unwraps──▶ v
 
 ### What the server can see
 
-Your email, your encrypted vault key and its salt, and for each note: a random ID, the ciphertext, its size, a version number and when it was last saved. The server also keeps access logs for 100 days, as Thai law requires. The [Privacy Policy](https://deeznote.103-253-146-20.sslip.io/privacy) lists everything, and a test fails if the data-handling code changes without the policy being reviewed.
+Your email, your encrypted vault key and its salt, and for each note: a random ID, the ciphertext, its size, a version number and when it was last saved. The web server also keeps access logs for 100 days.
 
 ### Limits of the threat model
 
@@ -90,20 +90,18 @@ The web app runs at http://localhost:5173 and the API at http://localhost:3000. 
 | `bun run typecheck` | Typecheck all workspaces |
 | `bun run build` | Build for production |
 | `bun run db:generate` | Create a migration after changing `apps/api/src/db/schema.ts` |
-| `bun run policy:fingerprint` | Print the fingerprint after reviewing the legal pages |
 
 Tests cover the encryption (vault, notes, note passwords, legacy formats, tampering), the API's auth, quotas and abuse limits against a real SQLite database, and note export.
 
 ## Deployment
 
-A push to `main` runs typechecks, tests and the build in GitHub Actions, then ships a release to the server over SSH, switches to it and health-checks it, rolling back automatically if it fails. The API runs as a systemd service behind Caddy, and the database is backed up daily. See [DEPLOY.md](DEPLOY.md).
+Docker Compose on a VPS managed by Dokploy, which rebuilds from `main` on every push; GitHub Actions runs typechecks, tests and the build. Caddy serves the app and proxies the API, and the database is backed up daily and kept 7 days. See [DEPLOY.md](DEPLOY.md).
 
 ## Contributing
 
 Issues and pull requests are welcome. Before opening a pull request:
 
 - Run `bun test` and `bun run typecheck`.
-- If your change affects what data is collected, stored, sent or kept, update the Privacy Policy and Terms in `apps/web/src/legal/content.tsx`, in English and Thai. The policy test explains the steps.
 
 Please report security issues privately. See [SECURITY.md](SECURITY.md).
 

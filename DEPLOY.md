@@ -1,119 +1,42 @@
 # Deploying DeezNote
 
-Every push to `main` builds and tests the app in GitHub Actions, then ships it to the droplet:
+DeezNote runs as a Docker Compose project on a VPS managed by [Dokploy](https://dokploy.com). Dokploy builds
+`docker-compose.yml` from `main` on every push; GitHub Actions only typechecks, tests and builds.
 
 ```
-push to main → typecheck + tests + build (GitHub) → upload release over SSH
-            → switch /srv/deeznote/current → restart API → health check
-            → unhealthy? automatic rollback to the previous release
+internet → Traefik (Dokploy, HTTPS) → web (Caddy: PWA + /api proxy) → api (Bun, SQLite in volume `db`)
+                                                                     backup (daily snapshot of `db`)
 ```
 
-Nothing is built on the droplet. The API runs as the `deeznote-api` systemd service (Bun, ~40–60 MB, capped at 256 MB),
-bound to Docker's bridge IP so only the Caddy container can reach it. The database is one SQLite file in `/var/lib/deeznote`.
-
-Address used below: `deeznote.103-253-146-20.sslip.io` (free, points at the droplet's IP). To use a real domain later,
-change that one line in the Caddyfile and the `WEB_ORIGIN` line in the service (re-run the setup script with the new domain).
+| Service | What it does | Volume |
+|---|---|---|
+| `web` | Serves the built PWA, proxies `/api/*` to `api`, writes access logs (kept 100 days) | `logs` → `/logs` |
+| `api` | The API. Not published to the internet; only `web` can reach it | `db` → `/data` |
+| `backup` | Snapshots the database once a day, keeps 7 days (`deploy/backup.sh`) | `db`, `backups` → `/backups` |
 
 ## One-time setup
 
-### 1. Create a deploy key (on your Mac)
+1. Dokploy → **Create Project** → **Compose**. Provider: GitHub, this repo, branch `main`, compose path `./docker-compose.yml`.
+2. **Environment**: `SITE_URL=https://your.domain` (no trailing slash). It sets the API's allowed origin and the
+   link-preview URLs in the web build.
+3. **Domains**: add the domain on service `web`, port `80`, HTTPS on (Let's Encrypt). Point the domain's DNS A record
+   at the VPS first.
+4. **Deploy**, then turn on **Auto Deploy**.
 
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/deeznote_deploy -N "" -C deeznote-deploy
-cat ~/.ssh/deeznote_deploy.pub     # public half: goes on the droplet (step 2)
-```
+Leave Traefik's access logs ("Requests" in Dokploy) off: Caddy already logs every request.
 
-The private half (`~/.ssh/deeznote_deploy`) goes into GitHub (step 4). It only grants access to the `deeznote` user,
-which can restart the DeezNote API and nothing else.
+### Client IPs
 
-### 2. Prepare the droplet (as root)
+Rate limits are per client IP, so the chain must pass the real one through:
 
-```bash
-scp deploy/setup-server.sh root@103.253.146.20:/root/
-ssh root@103.253.146.20
-bash /root/setup-server.sh deeznote.103-253-146-20.sslip.io "PASTE THE .pub LINE FROM STEP 1"
-```
+- Traefik sets `X-Forwarded-For` to the client's address.
+- Caddy trusts private-range peers only (`trusted_proxies private_ranges`, strict, right to left) and sends just the
+  resolved client IP to the API.
+- The API trusts `X-Forwarded-For` only from `172.16.0.0/12` (`API_TRUSTED_PROXY_IPS` in `docker-compose.yml`), the
+  project's private Docker network. Keep `api` unpublished: never add `ports:` to it.
 
-It installs Bun, creates the `deeznote` user, `/srv/deeznote`, `/var/lib/deeznote` and the `deeznote-api` service, and
-prints the Caddy site block for step 3. Safe to re-run. The optional third argument is a comma-separated
-allowlist of Caddy's internal source IPs (see **Security configuration** below); re-running without it resets
-that generated service setting to trust no proxy.
-
-### 3. Let your existing Caddy serve DeezNote
-
-Caddy runs in the `/opt/exam` compose project. Two changes, then one restart of the Caddy container
-(the exam site blips for a few seconds).
-
-First check which compose file and project name it uses, so you edit the right file and don't create a second project:
-
-```bash
-docker inspect exam-prod-caddy-1 --format '{{ index .Config.Labels "com.docker.compose.project.config_files" }}'
-```
-
-**a) Mount the app into the Caddy container.** In that compose file, under the `caddy` service's `volumes:`, add:
-
-```yaml
-      - /srv/deeznote:/srv/deeznote:ro
-```
-
-**b) Add the site.** Back up first, then append the block the setup script printed:
-
-```bash
-cp /opt/exam/Caddyfile /opt/exam/Caddyfile.bak
-cat >> /opt/exam/Caddyfile <<'EOF'
-
-deeznote.103-253-146-20.sslip.io {
-	encode zstd gzip
-
-	handle_path /api/* {
-		reverse_proxy 172.17.0.1:3100
-	}
-
-	handle {
-		header {
-			X-Content-Type-Options nosniff
-			Referrer-Policy no-referrer
-			X-Frame-Options DENY
-			Permissions-Policy "camera=(), microphone=(), geolocation=()"
-			Content-Security-Policy "frame-ancestors 'none'; object-src 'none'; base-uri 'self'"
-		}
-		root * /srv/deeznote/current/web
-		try_files {path} /index.html
-		file_server
-	}
-}
-EOF
-```
-
-Use the IP the setup script printed if it isn't `172.17.0.1`. Append with `cat >>` (or `nano`), not `sed -i` or `vim`:
-the Caddyfile is mounted as a single file, and editors that replace the file leave the container reading the old one.
-
-**c) Check, then apply:**
-
-```bash
-docker run --rm -v /opt/exam/Caddyfile:/etc/caddy/Caddyfile:ro caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
-cd /opt/exam && docker compose -p exam-prod up -d caddy
-```
-
-If anything goes wrong: `cp /opt/exam/Caddyfile.bak /opt/exam/Caddyfile`, remove the volume line, run the same `up -d caddy`.
-
-### 4. Add the GitHub secrets
-
-GitHub → the repo → **Settings → Secrets and variables → Actions → New repository secret**:
-
-| Name | Value |
-|---|---|
-| `DEPLOY_HOST` | `103.253.146.20` |
-| `DEPLOY_SSH_KEY` | the whole private key: `cat ~/.ssh/deeznote_deploy` (including the BEGIN/END lines) |
-| `DEPLOY_KNOWN_HOSTS` | output of `ssh-keyscan -t ed25519 103.253.146.20` (run on your Mac) |
-
-`DEPLOY_KNOWN_HOSTS` stops a fake server from receiving your deploys. To double-check it, compare the fingerprint of
-`ssh-keyscan -t ed25519 103.253.146.20 | ssh-keygen -lf -` (Mac) with `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` (droplet).
-
-### 5. Deploy
-
-Push to `main` (or **Actions → Build and deploy → Run workflow**). When it's green, open
-https://deeznote.103-253-146-20.sslip.io. The first visit can take a few seconds while Caddy gets the HTTPS certificate.
+After deploying, check from two networks that you get separate rate buckets and that a spoofed `X-Forwarded-For` does
+not change yours.
 
 ## Security configuration
 
@@ -157,56 +80,24 @@ updates replace the old note's usage rather than adding a second copy. Envelope 
 outside the ciphertext quota. They are not full cryptographic validation. Note-count and storage
 violations return `413` with a machine-readable error code; note replacements at the count limit and
 deletions are allowed. Physical database size, logs and SQLite overhead are not included in plan quotas.
-Changing these defaults requires updating the published Terms in both languages to match.
-
-### Configure Caddy trust before public launch
-
-By default, `X-Forwarded-For` and `X-Real-IP` are ignored. With a reverse proxy this means clients share the
-proxy's IP allowance until you configure `API_TRUSTED_PROXY_IPS` with **Caddy's socket-peer IPs or their range**.
-The API bind address (`172.17.0.1`) is usually NOT Caddy's source IP.
-
-The setup script defaults to `172.16.0.0/12` (Docker's private range). That survives Caddy being recreated with a
-new container IP, and is safe here because the API listens only on the Docker bridge and ufw admits only Docker
-networks to its port. To pin an exact IP instead, find Caddy's address:
-
-```bash
-docker inspect exam-prod-caddy-1 --format '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{"\\n"}}{{end}}'
-```
-
-and supply it as the setup script's third argument, or add a systemd override with `sudo systemctl edit deeznote-api`:
-
-```ini
-[Service]
-Environment="API_TRUSTED_PROXY_IPS=172.16.0.0/12"
-```
-
-After changing it, run `sudo systemctl daemon-reload` and
-`sudo systemctl restart deeznote-api`. For allowlisted peers only, the API uses the rightmost valid
-`X-Forwarded-For` IP appended by Caddy. Keep Caddy's default behavior of rebuilding/appending this header;
-do not configure it to pass through a client-supplied value unchanged. Additional upstream proxies require
-reviewing the trust chain before changing this policy. Keep the API bound privately and firewall access
-restricted to the proxy. With an exact IP, update the allowlist whenever Caddy's IP changes.
-
-Apply the web security-header block in step 3 to an existing Caddy site too; deploying the API alone does not
-change Caddy configuration. The web CSP above blocks framing, objects, and foreign base URLs, but is NOT a strict
-script-policy/XSS defense. The API separately returns `no-store`, `nosniff`, `no-referrer`, and a restrictive CSP
-for its JSON responses. HTTPS/HSTS policy is managed at the proxy, not by an HTTP-only internal API.
-
-After deployment, verify headers and rate responses through Caddy in a controlled test, and confirm that different
-clients get different rate buckets and spoofed forwarded headers do not bypass limits.
 
 ## Day to day
 
-| Task | Command (on the droplet) |
+Run these on the VPS. Dokploy names containers `<project>-<service>-1`; `docker ps` shows them.
+
+| Task | Command |
 |---|---|
-| API logs | `journalctl -u deeznote-api -f` |
-| API status / memory | `systemctl status deeznote-api` |
-| Which release is live | `readlink /srv/deeznote/current` |
-| Roll back by hand | `ln -sfn /srv/deeznote/releases/<older-sha> /srv/deeznote/current && systemctl restart deeznote-api` |
-| `/api` returns 502 | Caddy can't reach the API. With ufw on, it needs: `ufw allow proto tcp from 172.16.0.0/12 to 172.17.0.1 port 3100` (the setup script adds this) |
-| Give an account Pro (until payments exist) | `sudo -u deeznote sqlite3 /var/lib/deeznote/deeznote.db "UPDATE users SET plan = 'pro' WHERE email = 'someone@example.com';"` (and `'free'` to undo) |
-| Change plan limits | Set `FREE_NOTE_BYTES`, `FREE_TOTAL_BYTES`, `PRO_NOTE_BYTES`, `PRO_TOTAL_BYTES` with `sudo systemctl edit deeznote-api`, then restart. Update the numbers in the Terms (`apps/web/src/legal/content.tsx`) to match. |
-| Back up the database | `sqlite3 /var/lib/deeznote/deeznote.db ".backup /root/deeznote-$(date +%F).db"` |
+| API logs | `docker logs -f <api container>` (or the Logs tab in Dokploy) |
+| Access logs | `docker exec <web container> tail -f /logs/access.log` |
+| List backups | `docker exec <backup container> ls -lh /backups` |
+| Back up now | restart the `backup` service: it snapshots on start |
+| Give an account Pro (until payments exist) | `docker exec <backup container> sqlite3 /data/deeznote.db "UPDATE users SET plan = 'pro' WHERE email = 'someone@example.com';"` (and `'free'` to undo) |
+| Change plan limits | Add `FREE_NOTE_BYTES`, `FREE_TOTAL_BYTES`, `PRO_NOTE_BYTES`, `PRO_TOTAL_BYTES` to `api`'s environment, redeploy. |
+| Roll back | Dokploy → Deployments → redeploy an earlier commit |
+
+Backups live on the same VPS: they protect against bad migrations, corruption and mistakes, not against losing the
+server. Restore: stop `api`, replace `/data/deeznote.db` with `gunzip -c /backups/deeznote-YYYYMMDD-HHMMSS.db.gz`,
+delete `deeznote.db-wal` and `deeznote.db-shm`, `chown 1000:1000 /data/deeznote.db`, start `api`.
 
 Rollbacks switch the code, not the database. Migrations only ever add to the schema, so an older release keeps working
 against a newer database as long as migrations stay additive (add columns or tables; don't rename or drop them).
