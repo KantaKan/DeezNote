@@ -12,7 +12,6 @@ DATABASE=/data/deeznote.db
 umask 077
 
 backup() {
-  [ -f "$DATABASE" ] || { echo "no database yet"; return; }
   stamp=$(date -u +%Y%m%d-%H%M%S)
   tmp="/backups/.deeznote-$stamp.db"
   sqlite3 "$DATABASE" ".timeout 10000" ".backup '$tmp'"
@@ -23,6 +22,9 @@ backup() {
   find /backups -name 'deeznote-*.db.gz' -mtime +$((KEEP_DAYS - 1)) -delete
   echo "backup ok: deeznote-$stamp.db.gz"
 }
+
+# The API creates the database on first start, which can be after this container starts.
+until [ -f "$DATABASE" ]; do sleep 10; done
 
 # ponytail: every 24h from container start, not a fixed clock time; a restart takes an extra snapshot.
 while true; do backup || true; sleep 86400; done
